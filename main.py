@@ -15,12 +15,12 @@ class CollectifySheetReader:
     """
     SPREADSHEET_TITLE = "Collectify"
 
-    def __init__(self, worksheet_name="collectify_data", creds_path='collectify_credentials.json',
-                 scope=None):
+    # Updated __init__: added optional creds parameter for secrets
+    def __init__(self, worksheet_name="collectify_data", creds=None, scope=None):
         """
         Parameters:
             worksheet_name (str): The worksheet name to access.
-            creds_path (str): Path to the service account credentials JSON file.
+            creds (str): JSON string from Streamlit Secrets (if available)
             scope (list): OAuth scopes. Writing requires the spreadsheets scope.
         """
         if scope is None:
@@ -30,14 +30,21 @@ class CollectifySheetReader:
                 "https://www.googleapis.com/auth/spreadsheets"  # Needed for writing
             ]
         self.worksheet_name = worksheet_name
-        self.creds_path = creds_path
         self.scope = scope
-        self.client = self._authorize_client()
+        # Pass the creds to _authorize_client
+        self.client = self._authorize_client(creds)
         self.worksheet = self._get_worksheet()
 
-    def _authorize_client(self):
-        creds = Credentials.from_service_account_file(self.creds_path, scopes=self.scope)
-        return gspread.authorize(creds)
+    # Updated _authorize_client: now checks if creds provided via st.secrets are available.
+    def _authorize_client(self, creds):
+        # If credentials are provided (from secrets), use them.
+        if creds:
+            # st.secrets["gcp_service_account"] is expected to be a dict (from TOML)
+            credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=self.scope)
+        else:
+            # Fallback for local development using the local JSON file.
+            credentials = Credentials.from_service_account_file("collectify_credentials.json", scopes=self.scope)
+        return gspread.authorize(credentials)
 
     def _get_worksheet(self):
         spreadsheet = self.client.open(self.SPREADSHEET_TITLE)
@@ -243,10 +250,14 @@ def main():
     # Inject the custom CSS style into the app.
     st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
+    # Load credentials from Streamlit secrets if available; otherwise fallback to local file.
+    # This line fetches the secret as a dict (or returns None).
+    creds = st.secrets.get("gcp_service_account", None)
+
     # Instantiate the reader for the main sheet ("collectify_data").
-    main_reader = CollectifySheetReader()  # Defaults to worksheet "collectify_data"
+    main_reader = CollectifySheetReader(creds=creds)
     # Instantiate a reader for the "ChatGPT Prompts" sheet.
-    prompts_reader = CollectifySheetReader(worksheet_name="ChatGPT Prompts")
+    prompts_reader = CollectifySheetReader(worksheet_name="ChatGPT Prompts", creds=creds)
 
     # Get distinct categories from the main sheet.
     records = main_reader.get_all_records()
@@ -292,12 +303,6 @@ def main():
     }
 
     # Build the final sidebar menu order:
-    # 1) Home
-    # 2) Add New Item
-    # 3) Add New ChatGPT Prompt
-    # 4) Divider
-    # 5) ChatGPT Prompts
-    # 6) All dynamic categories
     menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "---", "ChatGPT Prompts"]
     menu_keys_bottom = categories  # dynamic categories
     menu_keys = menu_keys_top + menu_keys_bottom
