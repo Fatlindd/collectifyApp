@@ -232,6 +232,18 @@ def home_page():
     st.write(
         "This website is designed to help you discover a wide range of online tools, resources, and websites curated for different needs. Use the sidebar to browse various categories, explore ChatGPT prompts, or contribute by adding a new item.")
     st.divider()
+    st.write(
+        """
+        **About This App** 🚀✨
+
+        I built this web app as a personal project to support my journey as a programmer and boost my productivity at work. It serves as a centralized hub of hand-picked resources and innovative tools that help me learn new techniques, solve challenging problems, and stay ahead in the fast-paced tech world.
+
+        Every tool and prompt has been carefully selected to streamline my workflow, enhance my skills, and ultimately make my daily tasks smoother and more efficient.
+
+        **Welcome to my productivity toolkit!** 💡👨‍💻
+        """
+    )
+
 
 
 def get_icon(page_name, mapping):
