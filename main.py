@@ -126,20 +126,17 @@ def render_category_page(reader, target_category):
 # ----------------------------------------
 # Add a new item to the tool sheet
 # ----------------------------------------
-@st.cache_data(ttl=60)
-def _cached_categories(reader):
-    try:
-        records = reader.get_all_records()
-        return sorted(set(r.get("category", "").strip() for r in records if r.get("category", "").strip()))
-    except APIError:
-        return []
 
 def render_add_item_page(reader):
     st.title("Add New Item")
     st.write("Use this page to contribute a new tool to the collection. Fill in the fields below.")
     st.divider()
 
-    categories = _cached_categories(reader)
+    # ✅ Instead: load categories directly without caching
+    records = reader.get_all_records()
+    categories = sorted(
+        set(record.get("category", "").strip() for record in records if record.get("category", "").strip())
+    )
     if not categories:
         categories = ["Default"]
 
