@@ -287,7 +287,7 @@ def main():
         "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
         "---": lambda: None,  # Divider does nothing
         "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader),
-        "Todo App": todo_main
+        "Todo App": lambda: todo_main(creds)
     }
 
     # Dynamically create a page for each category from the main sheet.

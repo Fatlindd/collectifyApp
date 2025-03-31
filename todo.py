@@ -62,7 +62,7 @@ class TodoApp:
         self.sheet_client.delete_todo(row_index)
 
 # Main function to be called from main app
-def main():
+def main(creds):
     # Credentials from st.secrets already loaded in Collectify main app
     service_account_info = st.secrets["gcp_service_account"]
     if not isinstance(service_account_info, dict):
