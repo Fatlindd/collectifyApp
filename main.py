@@ -319,7 +319,7 @@ def main():
     }
 
     # Build the final sidebar menu order:
-    menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "Todo App" "---", "ChatGPT Prompts"]
+    menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "Todo App", "---", "ChatGPT Prompts"]
     menu_keys_bottom = categories  # dynamic categories
     menu_keys = menu_keys_top + menu_keys_bottom
 
