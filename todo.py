@@ -5,7 +5,7 @@ from google.oauth2 import service_account
 import pandas as pd
 import datetime
 
-# Function to style the status column based on its value
+# Function to style the status column
 def color_status(val):
     if val == "Completed":
         return "background-color: #77B254; color: white;"
@@ -16,11 +16,11 @@ def color_status(val):
     else:
         return ""
 
-# Class to manage Google Sheets interactions
+# Sheet access class
 class GoogleSheetClient:
-    def __init__(self, creds, spreadsheet_name):
+    def __init__(self, creds, spreadsheet_name="Collectify", worksheet_name="Todo"):
         self.client = gspread.authorize(creds)
-        self.sheet = self.client.open(spreadsheet_name).worksheet("Todo")
+        self.sheet = self.client.open(spreadsheet_name).worksheet(worksheet_name)
 
     def read_all_values(self):
         return self.sheet.get_all_values()
@@ -39,7 +39,7 @@ class GoogleSheetClient:
     def delete_todo(self, row_index):
         self.sheet.delete_rows(row_index)
 
-# Class encapsulating the Todo app logic
+# Todo logic wrapper
 class TodoApp:
     def __init__(self, sheet_client):
         self.sheet_client = sheet_client
@@ -61,9 +61,19 @@ class TodoApp:
     def remove_todo(self, row_index):
         self.sheet_client.delete_todo(row_index)
 
-# Main function for the Streamlit UI
+# Main function to be called from main app
 def main():
-    # st.set_page_config(page_title="Todo Web App", layout="wide")
+    # Credentials from st.secrets already loaded in Collectify main app
+    service_account_info = st.secrets["gcp_service_account"]
+    if not isinstance(service_account_info, dict):
+        service_account_info = dict(service_account_info)
+
+    scopes = ['https://www.googleapis.com/auth/spreadsheets',
+              'https://www.googleapis.com/auth/drive']
+    creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=scopes)
+
+    sheet_client = GoogleSheetClient(creds)
+    todo_app = TodoApp(sheet_client)
 
     selected = option_menu(
         menu_title="",
@@ -74,20 +84,6 @@ def main():
         orientation="horizontal"
     )
 
-    # Load credentials from Streamlit secrets
-    service_account_info = st.secrets["gcp_service_account"]
-    if not isinstance(service_account_info, dict):
-        service_account_info = dict(service_account_info)
-
-    scopes = ['https://www.googleapis.com/auth/spreadsheets',
-              'https://www.googleapis.com/auth/drive']
-    creds = service_account.Credentials.from_service_account_info(service_account_info, scopes=scopes)
-
-    spreadsheet_name = "MyTodo"
-    sheet_client = GoogleSheetClient(creds, spreadsheet_name)
-    todo_app = TodoApp(sheet_client)
-
-    # -------------------- CREATE --------------------
     if selected == "Create":
         st.header("📋 Add New Todo")
         todo_item = st.text_input("Enter your todo:")
@@ -99,7 +95,6 @@ def main():
             else:
                 st.error("Please enter a valid todo item.")
 
-    # -------------------- READ --------------------
     elif selected == "Read":
         st.header("🏡 MyTodo List")
         headers, todos = todo_app.list_todos()
@@ -111,7 +106,6 @@ def main():
         else:
             st.info("No todos found.")
 
-    # -------------------- UPDATE --------------------
     elif selected == "Update":
         st.header("🔏 Update a Todo")
         headers, todos = todo_app.list_todos()
@@ -129,7 +123,6 @@ def main():
             current_status = todos[selected_row - 2][4]
 
             new_todo = st.text_input("Update Todo", value=current_todo)
-
             priority_options = ["Low", "Medium", "High"]
             try:
                 default_priority_index = priority_options.index(current_priority)
@@ -164,7 +157,6 @@ def main():
         else:
             st.info("No todos available to update.")
 
-    # -------------------- DELETE --------------------
     elif selected == "Delete":
         st.header("🗑️ Delete a Todo")
         headers, todos = todo_app.list_todos()
@@ -180,6 +172,3 @@ def main():
                 st.success("Todo deleted!")
         else:
             st.info("No todos available to delete.")
-
-if __name__ == "__main__":
-    main()
