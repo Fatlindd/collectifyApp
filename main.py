@@ -247,6 +247,8 @@ def home_page():
 
         I built this platform to centralize the tools and prompts that make my development journey smoother and more productive. Whether you're a student, developer, or tech enthusiast, this toolkit is designed to help you learn faster and work smarter.
 
+        **New! Todo App:** Seamlessly add, update, and delete tasks to stay organized and boost your productivity—all in one place.
+
         **Feel free to explore and contribute!** 💡
         """
     )
