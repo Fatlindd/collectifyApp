@@ -4,6 +4,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 from style import STYLE_CSS  # Import your custom CSS
 
+from todo import main as todo_main
+
 # Set Streamlit layout to wide mode
 st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
 
@@ -284,7 +286,8 @@ def main():
         "Add New Item": lambda: render_add_item_page(main_reader),
         "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
         "---": lambda: None,  # Divider does nothing
-        "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader)
+        "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader),
+        "Todo App": todo_main
     }
 
     # Dynamically create a page for each category from the main sheet.
@@ -311,11 +314,12 @@ def main():
         "VSCode Extensions": "plug",
         "Web Design": "brush",
         "Web Scraping": "search",
-        "Youtube Videos": "youtube"
+        "Youtube Videos": "youtube",
+        "Todo App": "list-task"
     }
 
     # Build the final sidebar menu order:
-    menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "---", "ChatGPT Prompts"]
+    menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "Todo App" "---", "ChatGPT Prompts"]
     menu_keys_bottom = categories  # dynamic categories
     menu_keys = menu_keys_top + menu_keys_bottom
 
