@@ -254,6 +254,16 @@ def home_page():
         """
     )
 
+def get_icon(page_name, mapping):
+    """
+    Returns the icon for a given page using case-insensitive lookup.
+    If not found, defaults to 'tools'.
+    """
+    for key, icon in mapping.items():
+        if key.lower() == page_name.lower():
+            return icon
+    return "tools"
+
 
 def main():
     # Inject custom styles
