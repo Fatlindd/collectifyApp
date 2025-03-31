@@ -7,7 +7,7 @@ import pandas as pd
 import datetime
 
 # ----------------------------------------
-# Utility: Style the "status" column
+# Style for the status column
 # ----------------------------------------
 def color_status(val):
     if val == "Completed":
@@ -20,7 +20,7 @@ def color_status(val):
         return ""
 
 # ----------------------------------------
-# Google Sheets Wrapper
+# Google Sheets client handler
 # ----------------------------------------
 class GoogleSheetClient:
     def __init__(self, creds, spreadsheet_name="Collectify", worksheet_name="Todo"):
@@ -28,7 +28,7 @@ class GoogleSheetClient:
         try:
             self.sheet = self.client.open(spreadsheet_name).worksheet(worksheet_name)
         except APIError as e:
-            st.error("🚫 Unable to access the Google Sheet. Please check credentials or sheet name.")
+            st.error("🚫 Could not access the 'Todo' worksheet in the 'Collectify' spreadsheet.")
             st.exception(e)
             st.stop()
 
@@ -36,16 +36,14 @@ class GoogleSheetClient:
         try:
             return self.sheet.get_all_values()
         except APIError as e:
-            st.error("⚠️ Failed to read data from Google Sheet.")
+            st.error("❌ Failed to read data from Google Sheets.")
             st.exception(e)
             return []
 
     def add_todo(self, todo_item, priority):
         try:
             date_added = datetime.datetime.now().strftime('%d/%m/%Y')
-            date_completed = ""
-            status = "Incomplete"
-            self.sheet.append_row([todo_item, priority, date_added, date_completed, status])
+            self.sheet.append_row([todo_item, priority, date_added, "", "Incomplete"])
         except APIError as e:
             st.error("❌ Failed to add new todo.")
             st.exception(e)
@@ -67,14 +65,13 @@ class GoogleSheetClient:
             st.exception(e)
 
 # ----------------------------------------
-# Todo App Logic
+# Business logic wrapper
 # ----------------------------------------
 class TodoApp:
     def __init__(self, sheet_client):
         self.sheet_client = sheet_client
 
-    @st.cache_data(ttl=60)
-    def list_todos_cached(self):
+    def list_todos(self):
         data = self.sheet_client.read_all_values()
         if len(data) > 1:
             headers = data[0]
@@ -92,7 +89,15 @@ class TodoApp:
         self.sheet_client.delete_todo(row_index)
 
 # ----------------------------------------
-# Main UI for Todo App
+# Caching wrapper outside class (to fix UnhashableParamError)
+# ----------------------------------------
+@st.cache_data(ttl=60)
+def get_cached_todos(sheet_client):
+    todo_app = TodoApp(sheet_client)
+    return todo_app.list_todos()
+
+# ----------------------------------------
+# Main UI logic
 # ----------------------------------------
 def main(creds):
     sheet_client = GoogleSheetClient(creds)
@@ -107,6 +112,7 @@ def main(creds):
         orientation="horizontal"
     )
 
+    # -------------------- CREATE --------------------
     if selected == "Create":
         st.header("📋 Add New Todo")
         todo_item = st.text_input("Enter your todo:")
@@ -118,9 +124,10 @@ def main(creds):
             else:
                 st.error("⚠️ Please enter a valid todo item.")
 
+    # -------------------- READ --------------------
     elif selected == "Read":
         st.header("🏡 MyTodo List")
-        headers, todos = todo_app.list_todos_cached()
+        headers, todos = get_cached_todos(sheet_client)
         if todos:
             df = pd.DataFrame(todos, columns=headers)
             df.index = range(1, len(df) + 1)
@@ -129,9 +136,10 @@ def main(creds):
         else:
             st.info("ℹ️ No todos found.")
 
+    # -------------------- UPDATE --------------------
     elif selected == "Update":
         st.header("🔏 Update a Todo")
-        headers, todos = todo_app.list_todos_cached()
+        headers, todos = get_cached_todos(sheet_client)
         if todos:
             row_options = {
                 f"{todo[0]} | {todo[4]}": i + 2
@@ -147,10 +155,7 @@ def main(creds):
 
             new_todo = st.text_input("Update Todo", value=current_todo)
             priority_options = ["Low", "Medium", "High"]
-            try:
-                default_priority_index = priority_options.index(current_priority)
-            except ValueError:
-                default_priority_index = 0
+            default_priority_index = priority_options.index(current_priority) if current_priority in priority_options else 0
 
             if current_date_completed:
                 try:
@@ -161,10 +166,7 @@ def main(creds):
                 default_date_completed = datetime.date.today()
 
             status_options = ["Completed", "Incomplete", "In Progress"]
-            try:
-                default_status_index = status_options.index(current_status)
-            except ValueError:
-                default_status_index = 1
+            default_status_index = status_options.index(current_status) if current_status in status_options else 1
 
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -180,9 +182,10 @@ def main(creds):
         else:
             st.info("ℹ️ No todos available to update.")
 
+    # -------------------- DELETE --------------------
     elif selected == "Delete":
         st.header("🗑️ Delete a Todo")
-        headers, todos = todo_app.list_todos_cached()
+        headers, todos = get_cached_todos(sheet_client)
         if todos:
             row_options = {
                 f"{todo[0]} | {todo[4]}": i + 2
