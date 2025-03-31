@@ -7,7 +7,7 @@ import pandas as pd
 import datetime
 
 # ----------------------------------------
-# Style for the status column
+# Utility: style the status column
 # ----------------------------------------
 def color_status(val):
     if val == "Completed":
@@ -65,7 +65,7 @@ class GoogleSheetClient:
             st.exception(e)
 
 # ----------------------------------------
-# Business logic wrapper
+# Todo app logic wrapper
 # ----------------------------------------
 class TodoApp:
     def __init__(self, sheet_client):
@@ -89,15 +89,7 @@ class TodoApp:
         self.sheet_client.delete_todo(row_index)
 
 # ----------------------------------------
-# Caching wrapper outside class (to fix UnhashableParamError)
-# ----------------------------------------
-@st.cache_data(ttl=60)
-def get_cached_todos(sheet_client):
-    todo_app = TodoApp(sheet_client)
-    return todo_app.list_todos()
-
-# ----------------------------------------
-# Main UI logic
+# Main UI entry point (called from main app)
 # ----------------------------------------
 def main(creds):
     sheet_client = GoogleSheetClient(creds)
@@ -127,7 +119,7 @@ def main(creds):
     # -------------------- READ --------------------
     elif selected == "Read":
         st.header("🏡 MyTodo List")
-        headers, todos = get_cached_todos(sheet_client)
+        headers, todos = todo_app.list_todos()
         if todos:
             df = pd.DataFrame(todos, columns=headers)
             df.index = range(1, len(df) + 1)
@@ -139,7 +131,7 @@ def main(creds):
     # -------------------- UPDATE --------------------
     elif selected == "Update":
         st.header("🔏 Update a Todo")
-        headers, todos = get_cached_todos(sheet_client)
+        headers, todos = todo_app.list_todos()
         if todos:
             row_options = {
                 f"{todo[0]} | {todo[4]}": i + 2
@@ -185,7 +177,7 @@ def main(creds):
     # -------------------- DELETE --------------------
     elif selected == "Delete":
         st.header("🗑️ Delete a Todo")
-        headers, todos = get_cached_todos(sheet_client)
+        headers, todos = todo_app.list_todos()
         if todos:
             row_options = {
                 f"{todo[0]} | {todo[4]}": i + 2
