@@ -31,6 +31,3 @@ CollectifyApp is a modern, Streamlit-powered productivity suite that integrates 
 - **Data Handling:** `pandas`, `datetime`
 
 ---
-
-## 📁 Project Structure
-
