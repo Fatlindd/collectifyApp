@@ -333,12 +333,7 @@ def home_page(categories_for_cards):
     # Recommended modules to surface on Home as cards
     featured = [
         # (display_name, icon_emoji, description, target_page)
-        ("Project Costs", "📊", "Track budgets, expenses, progress, dates; salary auto-filled by Apps Script.", "Project Costs"),
-        ("Credentials", "🔐", "Securely store platform logins and team references.", "Credentials"),
-        ("Employees", "👥", "Directory of roles, salaries and notes; used in project calculations.", "Employees"),
-        ("Figma Clients", "🎨", "Design links, owners and statuses in a searchable table.", "Figma Clients"),
-        ("UpBizz Landing Page", "🌐", "Catalog of landing pages, who worked on them, and notes.", "UpBizz Landing Page"),
-        ("Tasks History (Weekly)", "🗓️", "Weekly task reports: bars, counts, Kanban lanes.", "Tasks History (Weekly)"),
+
         # Dynamic categories from your Sheet (commonly used ones first)
         ("Artificial Intelligence", "🤖", "Handy AI tools and prompts for productivity.", "Artificial Intelligence"),
         ("Chrome Extensions", "🧩", "Browser add-ons that speed up daily work.", "Chrome Extensions"),
