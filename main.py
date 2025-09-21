@@ -26,7 +26,7 @@ STYLE_CSS = """
   --card-border: #eaeaea;
   --card-shadow: 0 2px 8px rgba(0,0,0,0.06);
 }
-html, body, [data-testid="stAppViewContainer"] { background: #f7f8fb; }
+
 
 .home-card {
   background: var(--card-bg);
