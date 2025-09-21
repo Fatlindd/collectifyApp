@@ -74,7 +74,7 @@ body, .stApp { background: #f7f9fc; }
 # Page configuration and styles
 # -----------------------------
 st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
-st.markdown(STYLE_CSS, unsafe_allow_html=True)
+st.markdown(f"<style>{STYLE_CSS}</style>", unsafe_allow_html=True)
 
 # -----------------------------
 # Auth
@@ -172,7 +172,6 @@ def get_icon(page_name, mapping):
 
 
 def _count_by_category(records):
-    # total_count, used_count for each category
     stats = {}
     for r in records:
         cat = str(r.get("category", "")).strip()
@@ -406,8 +405,6 @@ def home_page(records, categories, desc_map):
 # Main
 # -----------------------------
 def main():
-    st.markdown(STYLE_CSS, unsafe_allow_html=True)
-
     try:
         creds_local = Credentials.from_service_account_info(dict(st.secrets["gcp_service_account"]), scopes=scopes)
     except Exception as e:
