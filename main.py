@@ -8,7 +8,7 @@ from todo import main as todo_main  # Todo module
 # ------------------------------
 # Page config
 # ------------------------------
-st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
+st.set_page_config(page_title="Collectify Apps", page_icon=":zap:", layout="wide")
 
 # Bootstrap Icons (for sidebar + home cards)
 st.markdown(
@@ -317,10 +317,10 @@ def get_icon(name): return ICON_MAP.get(name, "tools")
 # Home (richer blurbs for "Explore All Categories")
 # ------------------------------
 def home_page(nav_items_for_cards):
-    st.title("Welcome to Collectify Tools")
+    st.title("Welcome to Collectify Apps")
     st.write(
     "This app was created by **Fatlindi** as a personal productivity companion. "
-    "It organizes useful tools into categories for faster access and daily learning. "
+    "It organizes collectify apps into categories for faster access and daily learning. "
     "The app is also connected to a Telegram bot, which sends me a random tool each day "
     "along with its category and purpose—helping me discover and apply new resources consistently."
     )
@@ -400,7 +400,7 @@ def main():
     menu_icons = [get_icon(k) for k in menu_keys]
 
     with st.sidebar:
-        selected = option_menu("Useful Tools", menu_keys, icons=menu_icons, default_index=0)
+        selected = option_menu("Collectify Apps", menu_keys, icons=menu_icons, default_index=0)
 
     page_modules["Home"] = lambda: home_page(menu_keys)
 
