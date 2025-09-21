@@ -318,6 +318,13 @@ def get_icon(name): return ICON_MAP.get(name, "tools")
 # ------------------------------
 def home_page(nav_items_for_cards):
     st.title("Welcome to Collectify Tools")
+    st.write(
+    "This app was created by **Fatlindi** as a personal productivity companion. "
+    "It organizes useful tools into categories for faster access and daily learning. "
+    "The app is also connected to a Telegram bot, which sends me a random tool each day "
+    "along with its category and purpose—helping me discover and apply new resources consistently."
+    )
+
     st.divider()
     st.subheader("Explore All Categories")
 
