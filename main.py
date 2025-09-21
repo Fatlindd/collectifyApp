@@ -3,27 +3,109 @@ from streamlit_option_menu import option_menu
 import gspread
 from google.oauth2.service_account import Credentials
 from gspread.exceptions import APIError
+from datetime import datetime
 from style import STYLE_CSS  # Custom CSS file
 from todo import main as todo_main  # Todo module
 
-# Set page configuration
+# ---------------------------
+# Page config
+# ---------------------------
 st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
 
-# Inject custom styles
+# Inject your existing custom styles
 st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
-# Load credentials from secrets
+# Additional dashboard CSS (cards, grids, spacing)
+DASHBOARD_CSS = """
+<style>
+/* Header */
+.dashboard-header h1 {
+  font-size: 44px; line-height: 1.1; margin-bottom: 8px;
+}
+.dashboard-header p.subtitle {
+  color: rgba(255,255,255,0.75); margin: 0 0 6px 0; font-size: 15px;
+}
+.dashboard-header .refreshed {
+  font-size: 12px; color: rgba(255,255,255,0.55);
+}
+
+/* KPIs */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+  margin: 22px 0 26px 0;
+}
+.kpi-card {
+  background: #0f172a;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 18px 18px 14px 18px;
+}
+.kpi-card .label {
+  font-size: 13px; color: rgba(255,255,255,0.70); margin-bottom: 6px;
+}
+.kpi-card .value {
+  font-size: 40px; font-weight: 700; color: #ffffff;
+}
+
+/* Section title */
+.section-title {
+  font-weight: 700; font-size: 16px; letter-spacing: .02em; margin: 6px 0 12px 0;
+  color: rgba(255,255,255,0.85);
+}
+
+/* Module grid */
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.module-card {
+  background: #0b1220;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 18px;
+}
+.module-card .title {
+  display:flex; align-items:center; gap:10px;
+  font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px;
+}
+.module-card .desc {
+  color: rgba(255,255,255,0.72); font-size: 14px; line-height: 1.5;
+}
+.module-emoji {
+  font-size: 20px; width: 28px; height: 28px; display:flex; align-items:center; justify-content:center;
+  background: rgba(255,255,255,0.06); border-radius: 8px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 1200px) {
+  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 800px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .module-grid { grid-template-columns: 1fr; }
+}
+</style>
+"""
+st.markdown(DASHBOARD_CSS, unsafe_allow_html=True)
+
+# ---------------------------
+# Credentials
+# ---------------------------
 try:
-    creds_info = st.secrets["gcp_service_account"]
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds = Credentials.from_service_account_info(dict(creds_info), scopes=scopes)
+  creds_info = st.secrets["gcp_service_account"]
+  scopes = [
+      "https://www.googleapis.com/auth/spreadsheets",
+      "https://www.googleapis.com/auth/drive"
+  ]
+  creds = Credentials.from_service_account_info(dict(creds_info), scopes=scopes)
 except Exception as e:
-    st.error("❌ Failed to load Google credentials.")
-    st.exception(e)
-    st.stop()
+  st.error("❌ Failed to load Google credentials.")
+  st.exception(e)
+  st.stop()
 
 
 class CollectifySheetReader:
@@ -102,7 +184,6 @@ def render_category_page(reader, target_category):
         st.exception(e)
         return
 
-    # 🔎 Search bar (by website/app name)
     search_query = st.text_input(
         "Search by name",
         placeholder="Type a website/app name..."
@@ -113,7 +194,6 @@ def render_category_page(reader, target_category):
     else:
         filtered_tools = tools
 
-    # Counter of results
     st.caption(f"Results: {len(filtered_tools)}")
 
     if filtered_tools:
@@ -137,16 +217,11 @@ def render_category_page(reader, target_category):
         st.info("ℹ️ No tools match your search.")
 
 
-# ----------------------------------------
-# Add a new item to the tool sheet
-# ----------------------------------------
-
 def render_add_item_page(reader):
     st.title("Add New Item")
     st.write("Use this page to contribute a new tool to the collection. Fill in the fields below.")
     st.divider()
 
-    # ✅ Load categories directly
     records = reader.get_all_records()
     categories = sorted(
         set(record.get("category", "").strip() for record in records if record.get("category", "").strip())
@@ -195,9 +270,6 @@ def render_add_item_page(reader):
             st.warning("⚠️ Please fill in at least the Category and Name fields.")
 
 
-# ----------------------------------------
-# Show ChatGPT prompts page
-# ----------------------------------------
 def render_chatgpt_prompts_page(prompts_reader):
     st.title("ChatGPT Prompts")
     st.write("Browse useful ChatGPT prompts with short descriptions and pre-filled content.")
@@ -219,9 +291,6 @@ def render_chatgpt_prompts_page(prompts_reader):
         st.info("ℹ️ No prompts found.")
 
 
-# ----------------------------------------
-# Add new ChatGPT prompt
-# ----------------------------------------
 def render_add_chatgpt_prompt_page(prompts_reader):
     st.title("Add New ChatGPT Prompt")
     st.write("Fill in the details to save a new ChatGPT prompt.")
@@ -246,32 +315,86 @@ def render_add_chatgpt_prompt_page(prompts_reader):
             st.warning("⚠️ Please fill in both the Description and Prompt fields.")
 
 
-# ----------------------------------------
-# Homepage
-# ----------------------------------------
-def home_page():
-    st.title("Welcome to Collectify Tools")
-    st.write(
-        "Discover a curated list of tools, websites, and AI resources. Use the sidebar to explore categories, add your own, or check out ChatGPT prompts."
-    )
-    st.divider()
+# ---------------------------
+# NEW: Dashboard-style Home
+# ---------------------------
+def home_page(main_reader, prompts_reader, categories):
+    # Header
     st.markdown(
-        """
-        ### 🚀 About This App
-
-        I built this platform to centralize the tools and prompts that make my development journey smoother and more productive. Whether you're a student, developer, or tech enthusiast, this toolkit is designed to help you learn faster and work smarter.
-
-        **New! Todo App:** Seamlessly add, update, and delete tasks to stay organized and boost your productivity—all in one place.
-
-        **Feel free to explore and contribute!** 💡
-        """
+        f"""
+        <div class="dashboard-header">
+          <h1>UpBizz Management Dashboard</h1>
+          <p class="subtitle">Manage projects, people, credentials, designs, subscriptions, and weekly tasks — all synced with Google Sheets.</p>
+          <div class="refreshed">Refreshed · {datetime.now().strftime("%b %d, %Y %H:%M")}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
+    # Compute KPIs from your data
+    records = main_reader.get_all_records()
+    total_tools = len(records)
+    categories_count = len(set(r.get("category", "").strip() for r in records if r.get("category")))
+    used_count = sum(1 for r in records if str(r.get("used", "")).strip().lower() == "yes")
+    unused_count = max(total_tools - used_count, 0)
+
+    try:
+        prompts_count = len(prompts_reader.get_all_records())
+    except Exception:
+        prompts_count = 0
+
+    # KPI row
+    st.markdown(
+        f"""
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="label">Total Tools</div><div class="value">{total_tools}</div></div>
+          <div class="kpi-card"><div class="label">Categories</div><div class="value">{categories_count}</div></div>
+          <div class="kpi-card"><div class="label">Used</div><div class="value">{used_count}</div></div>
+          <div class="kpi-card"><div class="label">Unused</div><div class="value">{unused_count}</div></div>
+          <div class="kpi-card"><div class="label">ChatGPT Prompts</div><div class="value">{prompts_count}</div></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    # Section: Modules at a Glance (static labels to mirror the screenshot vibe)
+    st.markdown('<div class="section-title">MODULES AT A GLANCE</div>', unsafe_allow_html=True)
+
+    modules = [
+        {"emoji": "🧮", "title": "Project Costs",
+         "desc": "Track budgets, expenses, company win, left budget, progress and dates. Daily Salary is auto-filled by Apps Script."},
+        {"emoji": "👥", "title": "Employees",
+         "desc": "Directory of roles, salaries and notes. Powers salary lookups used in project calculations."},
+        {"emoji": "🎨", "title": "Figma Clients",
+         "desc": "Clients’ design links, owners and statuses in a searchable, filterable table."},
+        {"emoji": "🔐", "title": "Credentials",
+         "desc": "Securely store platform logins and API keys in a structured sheet."},
+        {"emoji": "🧭", "title": "UpBizz Landing Page",
+         "desc": "Catalog of landing pages, who worked on them, and key links."},
+        {"emoji": "📅", "title": "Tasks History (Weekly)",
+         "desc": "Browse weekly task reports: stacked by person, status and project."},
+    ]
+
+    # Draw module cards
+    cards_html = '<div class="module-grid">'
+    for m in modules:
+        cards_html += f"""
+          <div class="module-card">
+            <div class="title">
+              <span class="module-emoji">{m['emoji']}</span>
+              <span>{m['title']}</span>
+            </div>
+            <div class="desc">{m['desc']}</div>
+          </div>
+        """
+    cards_html += "</div>"
+    st.markdown(cards_html, unsafe_allow_html=True)
+
+
+# ---------------------------
+# App routing
+# ---------------------------
 def get_icon(page_name, mapping):
-    """
-    Returns the icon for a given page using case-insensitive lookup.
-    If not found, defaults to 'tools'.
-    """
     for key, icon in mapping.items():
         if key.lower() == page_name.lower():
             return icon
@@ -279,10 +402,9 @@ def get_icon(page_name, mapping):
 
 
 def main():
-    # Inject custom styles
     st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
-    # Load credentials from Streamlit secrets
+    # Load credentials (again inside main to be safe in reruns)
     try:
         creds_info = st.secrets["gcp_service_account"]
         scopes = [
@@ -295,11 +417,11 @@ def main():
         st.exception(e)
         st.stop()
 
-    # Instantiate readers
+    # Readers
     main_reader = CollectifySheetReader(creds=creds)
     prompts_reader = CollectifySheetReader(worksheet_name="ChatGPT Prompts", creds=creds)
 
-    # Get distinct categories for dynamic menu
+    # Categories for dynamic menu
     try:
         records = main_reader.get_all_records()
         categories = sorted(set(r.get("category", "").strip() for r in records if r.get("category", "").strip()))
@@ -308,20 +430,19 @@ def main():
         st.exception(e)
         categories = []
 
-    # Page routing
+    # Page registry
     page_modules = {
-        "Home": home_page,
+        "Home": lambda: home_page(main_reader, prompts_reader, categories),
         "Add New Item": lambda: render_add_item_page(main_reader),
         "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
         "Todo App": lambda: todo_main(creds),
-        "---": lambda: None,  # Just a divider
-        "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader)
+        "---": lambda: None,
+        "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader),
     }
-
     for category in categories:
         page_modules[category] = lambda category=category: render_category_page(main_reader, category)
 
-    # Icon mapping for sidebar
+    # Icons
     icon_mapping = {
         "Home": "house",
         "Add New Item": "plus-square",
@@ -342,10 +463,9 @@ def main():
         "VSCode Extensions": "plug",
         "Web Design": "brush",
         "Web Scraping": "search",
-        "Youtube Videos": "youtube"
+        "Youtube Videos": "youtube",
     }
 
-    # Menu construction
     menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "Todo App", "---", "ChatGPT Prompts"]
     menu_keys_bottom = categories
     menu_keys = menu_keys_top + menu_keys_bottom
@@ -359,7 +479,6 @@ def main():
             default_index=0
         )
 
-    # Page execution
     if selected != "---":
         page_modules[selected]()
 
