@@ -296,7 +296,7 @@ def render_chatgpt_prompts_page(prompts_reader):
         st.divider()
 
 def render_add_chatgpt_prompt_page(prompts_reader):
-    st.title("Add New ChatGPT Prompt")
+    st.title("New ChatGPT Prompt")
     st.write("Store useful prompts with descriptions so they can be easily reused later.")
     st.divider()
 
@@ -321,7 +321,7 @@ def render_add_chatgpt_prompt_page(prompts_reader):
 # Sidebar Icons
 # ------------------------------
 ICON_MAP = {
-    "Home":"house", "Add New Item":"plus-square", "Add New ChatGPT Prompt":"plus-circle",
+    "Home":"house", "Add New Item":"plus-square", "New ChatGPT Prompt":"plus-circle",
     "---":"dash", "Todo App":"list-task", "ChatGPT Prompts":"chat-dots",
     "Artificial Intelligence":"robot", "Chrome Extensions":"puzzle", "Django":"server",
     "Free API Resources":"cloud", "FrontEnd Tools":"palette", "Icons Website":"image",
@@ -371,7 +371,7 @@ def home_page(nav_items_for_cards):
         "Web Scraping": "Utilities for extraction and automation—proxy lists, UA helpers, validators, and scripts to collect and debug web data responsibly.",
         "Youtube Videos": "Curated video tutorials (Python, React, Django, full-stack) to learn by building real projects step by step.",
         "Add New Item": "Create a new catalog entry: define the category, name, logo, link, and description to expand the library.",
-        "Add New ChatGPT Prompt": "Store a new prompt with a short description so your team can quickly find and reuse it later.",
+        "New ChatGPT Prompt": "Store a new prompt with a short description so your team can quickly find and reuse it later.",
         "Todo App": "Lightweight task tracker to plan work, record progress, and keep personal or team tasks visible inside the dashboard.",
     }
 
@@ -408,7 +408,7 @@ def main():
     page_modules = {
         "Home": lambda: home_page(nav_items_for_cards=[]),
         "Add New Item": lambda: render_add_item_page(main_reader),
-        "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
+        "New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
         "Todo App": lambda: todo_main(creds),
         "---": lambda: None,
         "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader),
@@ -416,7 +416,7 @@ def main():
     for c in categories:
         page_modules[c] = (lambda _c=c: render_category_page(main_reader, _c))
 
-    menu_keys_top = ["Home","Add New Item","Add New ChatGPT Prompt","Todo App","---","ChatGPT Prompts"]
+    menu_keys_top = ["Home","Add New Item","New ChatGPT Prompt","Todo App","---","ChatGPT Prompts"]
     menu_keys_bottom = categories
     menu_keys = menu_keys_top + menu_keys_bottom
     menu_icons = [get_icon(k) for k in menu_keys]
