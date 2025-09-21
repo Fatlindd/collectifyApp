@@ -226,40 +226,57 @@ def render_category_page(reader, target_category):
 # Add Item Page (unchanged)
 # ------------------------------
 def render_add_item_page(reader):
-    st.title("Add New Item")
+    st.title("➕ Add New Item")
+    st.write("Fill out the form below to add a new tool into the Collectify Apps library.")
     st.divider()
 
-    records = reader.get_all_records()
-    categories = sorted({r.get("category","").strip() for r in records if r.get("category","").strip()}) or ["Default"]
+    with st.form("add_item_form", clear_on_submit=True):
+        st.subheader("🔖 Basic Information")
+        col1, col2 = st.columns(2)
+        with col1:
+            category = st.selectbox(
+                "Select Category",
+                options=sorted({r.get("category", "").strip() for r in reader.get_all_records() if r.get("category", "").strip()}) or ["Default"],
+                help="Choose the most relevant category for this tool."
+            )
+        with col2:
+            name = st.text_input("Tool Name", placeholder="e.g. Postman, TailwindCSS")
 
-    col1, col2 = st.columns(2)
-    with col1: category = st.selectbox("Select Category", options=categories)
-    with col2: name = st.text_input("Name")
+        description = st.text_area("Description", placeholder="Write a short summary of what this tool does.")
 
-    description = st.text_area("Description")
+        st.subheader("🖼️ Visuals & Links")
+        col3, col4 = st.columns(2)
+        with col3:
+            logo_url = st.text_input("Logo URL", placeholder="Paste an image link here")
+        with col4:
+            store_link = st.text_input("Website / Store Link", placeholder="https://...")
 
-    col3, col4 = st.columns(2)
-    with col3: logo_url  = st.text_input("Logo URL")
-    with col4: store_link = st.text_input("Store Link")
+        st.subheader("⚙️ Additional Info")
+        col5, col6 = st.columns(2)
+        with col5:
+            button_name = st.text_input("Button Label", placeholder="Open, Visit, Try Now")
+        with col6:
+            used = st.selectbox("Mark as Used", options=["Yes", "No"])
 
-    col5, col6 = st.columns(2)
-    with col5: button_name = st.text_input("Button Name")
-    with col6: used = st.selectbox("Used", options=["Yes","No"])
-
-    if st.button("Add Item"):
-        if name and category:
-            try:
-                reader.append_new_item({
-                    "category":category, "name":name, "description":description,
-                    "logo_url":logo_url, "store_link":store_link,
-                    "button_name":button_name, "used":used
-                })
-                st.success("✅ New item added successfully!")
-            except Exception as e:
-                st.error("❌ Failed to add item.")
-                st.exception(e)
-        else:
-            st.warning("⚠️ Please fill in at least the Category and Name fields.")
+        submitted = st.form_submit_button("✅ Add Item")
+        if submitted:
+            if name and category:
+                try:
+                    reader.append_new_item({
+                        "category": category,
+                        "name": name,
+                        "description": description,
+                        "logo_url": logo_url,
+                        "store_link": store_link,
+                        "button_name": button_name,
+                        "used": used,
+                    })
+                    st.success(f"🎉 '{name}' added successfully to {category}!")
+                except Exception as e:
+                    st.error("❌ Failed to add item.")
+                    st.exception(e)
+            else:
+                st.warning("⚠️ Please provide at least the **Category** and **Name**.")
 
 # ------------------------------
 # Prompts Pages (now use SUBTITLE_MAP)
@@ -281,19 +298,26 @@ def render_chatgpt_prompts_page(prompts_reader):
         st.divider()
 
 def render_add_chatgpt_prompt_page(prompts_reader):
-    st.title("Add New ChatGPT Prompt")
+    st.title("💡 Add New ChatGPT Prompt")
+    st.write("Store useful prompts with descriptions so they can be easily reused later.")
     st.divider()
-    description = st.text_area("Description")
-    prompt = st.text_area("Prompt")
-    if st.button("Add Prompt"):
-        if description and prompt:
-            try:
-                prompts_reader.append_new_item({"description":description,"prompt":prompt})
-                st.success("✅ Prompt added successfully!")
-            except Exception as e:
-                st.error("❌ Failed to add prompt."); st.exception(e)
-        else:
-            st.warning("⚠️ Please fill in both the Description and Prompt fields.")
+
+    with st.form("add_prompt_form", clear_on_submit=True):
+        description = st.text_area("📝 Description", placeholder="e.g. Summarize long articles into bullet points")
+        prompt = st.text_area("💬 Prompt", placeholder="Paste or write the full ChatGPT prompt here")
+
+        submitted = st.form_submit_button("✅ Save Prompt")
+        if submitted:
+            if description and prompt:
+                try:
+                    prompts_reader.append_new_item({"description": description, "prompt": prompt})
+                    st.success("🎉 Prompt added successfully!")
+                except Exception as e:
+                    st.error("❌ Failed to add prompt.")
+                    st.exception(e)
+            else:
+                st.warning("⚠️ Please fill in both the **Description** and **Prompt**.")
+
 
 # ------------------------------
 # Sidebar Icons
