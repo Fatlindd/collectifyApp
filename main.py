@@ -15,17 +15,15 @@ st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
 # ------------------------------
 STYLE_CSS = """
 <style>
-/* Global */
 :root {
   --card-bg: #ffffff;
   --card-border: #ececec;
   --card-shadow: 0 2px 10px rgba(0,0,0,0.06);
   --card-shadow-hover: 0 6px 20px rgba(0,0,0,0.10);
-  --accent: #0ea5e9; /* sky-500 */
+  --accent: #0ea5e9;
 }
 html, body, [data-testid="stAppViewContainer"] { background: #f7f8fb; }
 
-/* Card Grid */
 .glance-wrap { margin-top: .25rem; }
 .glance-grid {
   display: grid;
@@ -35,55 +33,37 @@ html, body, [data-testid="stAppViewContainer"] { background: #f7f8fb; }
 @media (max-width: 1200px){ .glance-grid { grid-template-columns: repeat(8, 1fr); } }
 @media (max-width: 768px){ .glance-grid { grid-template-columns: repeat(4, 1fr); } }
 
-/* Card */
 .glance-card {
-  grid-column: span 6;           /* 2 per row on desktop (12/6) */
+  grid-column: span 6;
   display: flex; flex-direction: column;
-  padding: 18px 18px 16px 18px;
+  padding: 18px 18px 14px 18px;
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-radius: 14px;
   box-shadow: var(--card-shadow);
   transition: box-shadow .2s ease, transform .08s ease;
+  min-height: 126px;
 }
 .glance-card:hover { box-shadow: var(--card-shadow-hover); transform: translateY(-1px); }
 .glance-title { font-weight: 700; font-size: 20px; letter-spacing: .2px; display:flex; gap:.6rem; align-items:center;}
-.glance-desc { color: #4b5563; margin-top: 8px; line-height: 1.45; }
-.glance-pill {
-  display:inline-flex; align-items:center; gap:.35rem;
-  background: #f1f5f9; color:#334155;
-  font-size: 12px; padding: 3px 8px; border-radius: 999px; margin-top:10px;
-  border: 1px solid #e2e8f0;
-}
-
-/* Small icon badge */
+.glance-desc { color: #4b5563; margin-top: 8px; line-height: 1.45; min-height: 40px; }
 .badge {
   height: 28px; width: 28px; border-radius: 8px;
   display:flex; align-items:center; justify-content:center;
   background: #eef6ff; color: #0b6bcb; font-size: 16px;
 }
-
-/* Generic "card" used on category pages */
-.card {
-  background: #fff; border: 1px solid #eee; border-radius: 14px;
-  box-shadow: var(--card-shadow); padding: 16px; margin-bottom: 16px;
-}
-.card img { width: 56px; height: 56px; object-fit: contain; border-radius: 10px; background:#fafafa; border:1px solid #f0f0f0;}
-.card-title { font-weight: 700; font-size: 18px; margin-top: 8px; }
-.card-description { color: #4b5563; margin-top: 6px; min-height: 42px; }
-.card-footer { margin-top: 10px; }
+.card { background:#fff; border:1px solid #eee; border-radius:14px; box-shadow:var(--card-shadow); padding:16px; margin-bottom:16px; }
+.card img { width:56px; height:56px; object-fit:contain; border-radius:10px; background:#fafafa; border:1px solid #f0f0f0;}
+.card-title { font-weight:700; font-size:18px; margin-top:8px; }
+.card-description { color:#4b5563; margin-top:6px; min-height:42px; }
+.card-footer { margin-top:10px; }
 .card-button {
   background: var(--accent); color: white; border: none; border-radius: 10px;
   padding: 8px 12px; cursor: pointer; font-weight: 600;
 }
 .card-button:hover { filter: brightness(0.95); }
-
-/* Hide native button chrome for our "linky" buttons inside HTML blocks */
-button[role="button"] { cursor: pointer; }
 </style>
 """
-
-# Inject styles
 st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
 # ------------------------------
@@ -102,15 +82,11 @@ except Exception as e:
     st.stop()
 
 # ------------------------------
-# Helpers for cross-page navigation from Home cards
+# Cross-page navigation helper
 # ------------------------------
 def go_to(page_name: str):
     st.session_state["__force_nav__"] = page_name
     st.rerun()
-
-def card_button(label: str, key: str, on_click_page: str):
-    # A small wrapper to make a full-width invisible button we can style around
-    return st.button(label, key=key, on_click=lambda: go_to(on_click_page))
 
 # ------------------------------
 # Google Sheets Reader
@@ -195,7 +171,6 @@ def render_category_page(reader, target_category):
         st.exception(e)
         return
 
-    # Search
     search_query = st.text_input("Search by name", placeholder="Type a website/app name...").strip()
     filtered_tools = [t for t in tools if search_query.lower() in str(t.get("name", "")).lower()] if search_query else tools
 
@@ -319,69 +294,94 @@ def render_add_chatgpt_prompt_page(prompts_reader):
             st.warning("⚠️ Please fill in both the Description and Prompt fields.")
 
 # ------------------------------
-# Home (with Modules at a Glance)
+# Emoji set for Home cards (visual only)
 # ------------------------------
-def home_page(categories_for_cards):
+EMOJI = {
+    "ChatGPT Prompts": "💬",
+    "Artificial Intelligence": "🤖",
+    "Chrome Extensions": "🧩",
+    "Django": "🗄️",
+    "Free API Resources": "☁️",
+    "FrontEnd Tools": "🎨",
+    "Icons Website": "🖼️",
+    "Programming Tools": "⚙️",
+    "Python": "🐍",
+    "React": "⚛️",
+    "Useful Website": "🔗",
+    "Useful Websites": "🔗",
+    "Vscode Extensions": "🔌",
+    "Web Design": "✏️",
+    "Web Scraping": "🔎",
+    "Youtube Videos": "▶️",
+    "Add New ChatGPT Prompt": "➕",
+    "Add New Item": "➕",
+    "Todo App": "📝",
+}
+
+# Optional short blurbs (fallback if none found)
+BLURB = {
+    "ChatGPT Prompts": "Save and reuse high-impact prompts.",
+    "Artificial Intelligence": "AI tools and workflows.",
+    "Chrome Extensions": "Boost your browser productivity.",
+    "Django": "Admin helpers, packages, snippets.",
+    "Free API Resources": "Public APIs for prototypes.",
+    "FrontEnd Tools": "UI kits, linters, inspectors.",
+    "Icons Website": "Icon packs and search engines.",
+    "Programming Tools": "CLIs, linters, formatters.",
+    "Python": "Libraries, snippets, utilities.",
+    "React": "Components, hooks, devtools.",
+    "Useful Website": "Handy links & utilities.",
+    "Useful Websites": "Handy links & utilities.",
+    "Vscode Extensions": "Editor add-ons that help.",
+    "Web Design": "Layouts, palettes, inspiration.",
+    "Web Scraping": "Scrapers, parsers, proxies.",
+    "Youtube Videos": "Learning and breakdowns.",
+    "Add New ChatGPT Prompt": "Capture a new prompt.",
+    "Add New Item": "Contribute a new tool.",
+    "Todo App": "Plan, track and complete tasks.",
+}
+
+# ------------------------------
+# Home (Modules at a Glance built from left navbar)
+# ------------------------------
+def home_page(nav_items_for_cards):
     st.title("Welcome to Collectify Tools")
-    st.write(
-        "Discover a curated list of tools, websites, and AI resources. Use the sidebar or the cards below to jump into a module."
-    )
+    st.write("Discover a curated list of tools, websites, and AI resources. Use the sidebar or the cards below to jump into a module.")
     st.divider()
 
     st.subheader("Modules at a Glance")
 
-    # Recommended modules to surface on Home as cards
-    featured = [
-        # (display_name, icon_emoji, description, target_page)
+    # Build card list from left navbar (exclude Home and divider)
+    items = [i for i in nav_items_for_cards if i not in ("Home", "---")]
+    if not items:
+        st.info("No modules available yet.")
+        return
 
-        # Dynamic categories from your Sheet (commonly used ones first)
-        ("Artificial Intelligence", "🤖", "Handy AI tools and prompts for productivity.", "Artificial Intelligence"),
-        ("Chrome Extensions", "🧩", "Browser add-ons that speed up daily work.", "Chrome Extensions"),
-        ("Django", "🖥️", "Framework utilities, admin helpers, packages.", "Django"),
-        ("Free API Resources", "☁️", "Public APIs for prototyping and integrations.", "Free API Resources"),
-    ]
-
-    # Only include featured items that actually exist (if it's a category)
-    normalized = set([c.lower() for c in categories_for_cards])
-    safe_items = []
-    for title, emoji, desc, target in featured:
-        # If it's one of your static custom pages, always show.
-        static_pages = {"Project Costs","Credentials","Employees","Figma Clients",
-                        "UpBizz Landing Page","Tasks History (Weekly)"}
-        if target in static_pages or target.lower() in normalized:
-            safe_items.append((title, emoji, desc, target))
-
-    # Render grid
     st.markdown('<div class="glance-wrap"><div class="glance-grid">', unsafe_allow_html=True)
-    for idx, (title, emoji, desc, target) in enumerate(safe_items):
-        # Each card gets a tiny form with a button to navigate
-        with st.container():
-            st.markdown(
-                f"""
-                <div class="glance-card">
-                    <div class="glance-title">
-                        <span class="badge">{emoji}</span>
-                        <span>{title}</span>
-                    </div>
-                    <div class="glance-desc">{desc}</div>
-                    <div class="glance-pill">Open module</div>
+
+    # Render each as a card with an "Open" button INSIDE the card
+    for idx, title in enumerate(items):
+        emoji = EMOJI.get(title, "🧰")
+        desc = BLURB.get(title, f"Open the {title} module.")
+        st.markdown(
+            f"""
+            <div class="glance-card">
+                <div class="glance-title">
+                    <span class="badge">{emoji}</span>
+                    <span>{title}</span>
                 </div>
-                """,
-                unsafe_allow_html=True,
-            )
-            # The clickable part:
-            card_button(label=f"Open: {title}", key=f"glance_btn_{idx}", on_click_page=target)
+                <div class="glance-desc">{desc}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        # Real Streamlit button that navigates
+        st.button("Open", key=f"glance_open_{idx}", on_click=lambda t=title: go_to(t))
+
     st.markdown('</div></div>', unsafe_allow_html=True)
 
-    st.divider()
-    st.markdown(
-        """
-        **New! Todo App** — Seamlessly add, update, and delete tasks to stay organized and boost your productivity.
-        """
-    )
-
 # ------------------------------
-# Icon mapping helper
+# Icon mapping helper for the sidebar (Bootstrap icon names)
 # ------------------------------
 def get_icon(page_name, mapping):
     for key, icon in mapping.items():
@@ -393,7 +393,6 @@ def get_icon(page_name, mapping):
 # Main
 # ------------------------------
 def main():
-    # Inject CSS (again for safety on reruns in some Streamlit versions)
     st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
     # Instantiate readers
@@ -411,18 +410,17 @@ def main():
 
     # Page registry
     page_modules = {
-        "Home": lambda: home_page(categories_for_cards=categories),
+        "Home": lambda: home_page(nav_items_for_cards=[]),  # placeholder, we fill it after menu is built
         "Add New Item": lambda: render_add_item_page(main_reader),
         "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
         "Todo App": lambda: todo_main(creds),
         "---": lambda: None,
         "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader),
     }
-    # Add dynamic category pages
     for category in categories:
         page_modules[category] = (lambda c=category: render_category_page(main_reader, c))
 
-    # Icon mapping for sidebar (extendable)
+    # Icon mapping for sidebar
     icon_mapping = {
         "Home": "house",
         "Add New Item": "plus-square",
@@ -439,22 +437,16 @@ def main():
         "Programming Tools": "gear",
         "Python": "terminal",
         "React": "code-slash",
+        "Useful Website": "link-45deg",
         "Useful Websites": "link-45deg",
-        "VSCode Extensions": "plug",
+        "Vscode Extensions": "plug",
         "Web Design": "brush",
         "Web Scraping": "search",
         "Youtube Videos": "youtube",
-        # Add your static module icons too if you later wire them as pages
-        "Project Costs": "bar-chart",
-        "Employees": "people",
-        "Figma Clients": "palette",
-        "UpBizz Landing Page": "globe",
-        "Tasks History (Weekly)": "calendar3",
-        "Credentials": "shield-lock",
     }
 
     # Build menu
-    menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "Todo App", "---", "ChatGPT Prompts"]
+    menu_keys_top = ["Home", "Add New ChatGPT Prompt", "Todo App", "---", "ChatGPT Prompts"]
     menu_keys_bottom = categories
     menu_keys = menu_keys_top + menu_keys_bottom
     menu_icons = [get_icon(key, icon_mapping) for key in menu_keys]
@@ -462,24 +454,19 @@ def main():
     with st.sidebar:
         selected = option_menu("Useful Tools", menu_keys, icons=menu_icons, default_index=0)
 
-    # Allow Home-card clicks to override selection
+    # Rebuild Home now that we know nav items
+    page_modules["Home"] = lambda: home_page(menu_keys)
+
+    # Allow Home card clicks to override selection
     if "__force_nav__" in st.session_state:
         selected = st.session_state.pop("__force_nav__")
 
-    # Route
     if selected != "---":
-        # If a Home card points to a “static” name you haven’t created as a page,
-        # fall back to dynamic categories when possible.
-        if selected not in page_modules and selected in page_modules.keys():
-            page_modules[selected]()
+        # If a target isn't in page_modules but exists as a dynamic category, render it
+        if selected not in page_modules and selected in categories:
+            render_category_page(main_reader, selected)
         else:
-            # If target not registered (e.g., "Project Costs" if not implemented as a page),
-            # try to resolve to a dynamic category with the same name.
-            if selected not in page_modules and selected in categories:
-                render_category_page(main_reader, selected)
-            else:
-                # Normal path
-                page_modules.get(selected, lambda: st.error("Page not found"))()
+            page_modules.get(selected, lambda: st.error("Page not found"))()
 
 if __name__ == "__main__":
     main()
