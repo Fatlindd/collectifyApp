@@ -231,7 +231,7 @@ def render_add_item_page(reader):
     st.divider()
 
     with st.form("add_item_form", clear_on_submit=True):
-        st.subheader("🔖 Basic Information")
+        st.subheader("Basic Information")
         col1, col2 = st.columns(2)
         with col1:
             category = st.selectbox(
@@ -244,21 +244,21 @@ def render_add_item_page(reader):
 
         description = st.text_area("Description", placeholder="Write a short summary of what this tool does.")
 
-        st.subheader("🖼️ Visuals & Links")
+        st.subheader("Visuals & Links")
         col3, col4 = st.columns(2)
         with col3:
             logo_url = st.text_input("Logo URL", placeholder="Paste an image link here")
         with col4:
             store_link = st.text_input("Website / Store Link", placeholder="https://...")
 
-        st.subheader("⚙️ Additional Info")
+        st.subheader("Additional Info")
         col5, col6 = st.columns(2)
         with col5:
             button_name = st.text_input("Button Label", placeholder="Open, Visit, Try Now")
         with col6:
             used = st.selectbox("Mark as Used", options=["Yes", "No"])
 
-        submitted = st.form_submit_button("✅ Add Item")
+        submitted = st.form_submit_button("Add Item")
         if submitted:
             if name and category:
                 try:
@@ -271,12 +271,12 @@ def render_add_item_page(reader):
                         "button_name": button_name,
                         "used": used,
                     })
-                    st.success(f"🎉 '{name}' added successfully to {category}!")
+                    st.success(f"'{name}' added successfully to {category}!")
                 except Exception as e:
-                    st.error("❌ Failed to add item.")
+                    st.error("Failed to add item.")
                     st.exception(e)
             else:
-                st.warning("⚠️ Please provide at least the **Category** and **Name**.")
+                st.warning("Please provide at least the **Category** and **Name**.")
 
 # ------------------------------
 # Prompts Pages (now use SUBTITLE_MAP)
@@ -288,12 +288,12 @@ def render_chatgpt_prompts_page(prompts_reader):
     try:
         records = prompts_reader.get_all_records()
     except APIError as e:
-        st.error("❌ Failed to load prompts.")
+        st.error("Failed to load prompts.")
         st.exception(e); return
     if not records:
-        st.info("ℹ️ No prompts found."); return
+        st.info("No prompts found."); return
     for row in records:
-        st.write("📌 " + row.get("description",""))
+        st.write("" + row.get("description",""))
         st.code(row.get("prompt",""), language=None)
         st.divider()
 
