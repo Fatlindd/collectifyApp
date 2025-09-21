@@ -313,36 +313,42 @@ def get_icon(name): return ICON_MAP.get(name, "tools")
 # ------------------------------
 # Home (unchanged look; cards are compact; no bg override)
 # ------------------------------
+# ------------------------------
+# Home (richer blurbs for "Modules at a Glance")
+# ------------------------------
 def home_page(nav_items_for_cards):
     st.title("Welcome to Collectify Tools")
     st.divider()
     st.subheader("Modules at a Glance")
 
     items = [i for i in nav_items_for_cards if i not in ("Home","---")]
+
+    # Rephrased, more descriptive explanations for each module
+    desc_map = {
+        "ChatGPT Prompts": "A library of ready-to-use prompts with short notes. Copy, tweak, and paste to speed up ideation, coding help, and writing tasks.",
+        "Artificial Intelligence": "Curated AI platforms for building, automating, and accelerating work—use them for prototyping apps, content generation, and task automation.",
+        "Chrome Extensions": "Handpicked browser add-ons that improve productivity, security, and creativity directly in Chrome while you browse or build.",
+        "Django": "Practical Django packages and utilities to ship features faster—forms, static files, admin helpers, and performance tools.",
+        "Free API Resources": "A directory of free/public APIs to experiment with datasets, validate ideas, and integrate services without upfront costs.",
+        "FrontEnd Tools": "Design and UI helpers—CSS/SVG generators, loaders, templates, and inspectors—to craft polished, responsive interfaces quicker.",
+        "Icons Website": "Icon libraries and icon-building tools to keep your UI consistent, scalable, and on-brand without reinventing assets.",
+        "Programming Tools": "Editors, IDEs, and general dev utilities for writing, testing, debugging, and collaborating across languages.",
+        "Python": "Focused Python utilities (env, parsing, config) that make scripting, automation, and app configuration simpler and safer.",
+        "React": "UI kits, templates, and helper utilities that speed up component design, JSX conversion, and app scaffolding in React.",
+        "Useful Website": "A mixed toolkit of online services—learning, utilities, and references—that save time in day-to-day work.",
+        "Useful Websites": "A mixed toolkit of online services—learning, utilities, and references—that save time in day-to-day work.",
+        "Vscode Extensions": "VS Code add-ons that reduce errors, automate formatting, visualize data, and personalize your editor for faster development.",
+        "Web Design": "Resources for inspiration and execution—color tools, layout systems, UI kits, and collaboration tools for design workflows.",
+        "Web Scraping": "Utilities for extraction and automation—proxy lists, UA helpers, validators, and scripts to collect and debug web data responsibly.",
+        "Youtube Videos": "Curated video tutorials (Python, React, Django, full-stack) to learn by building real projects step by step.",
+        "Add New Item": "Create a new catalog entry: define the category, name, logo, link, and description to expand the library.",
+        "Add New ChatGPT Prompt": "Store a new prompt with a short description so your team can quickly find and reuse it later.",
+        "Todo App": "Lightweight task tracker to plan work, record progress, and keep personal or team tasks visible inside the dashboard.",
+    }
+
     cols = st.columns(3)
     for idx, title in enumerate(items):
         with cols[idx % 3]:
-            desc_map = {
-                "ChatGPT Prompts": SUBTITLE_MAP["ChatGPT Prompts"],
-                "Artificial Intelligence": "AI tools and workflows.",
-                "Chrome Extensions": "Boost your browser productivity.",
-                "Django": "Admin helpers & packages.",
-                "Free API Resources": "Public APIs for prototypes.",
-                "FrontEnd Tools": "UI kits & inspectors.",
-                "Icons Website": "Icon packs & search.",
-                "Programming Tools": "CLIs, linters, formatters.",
-                "Python": "Libraries & utilities.",
-                "React": "Components & hooks.",
-                "Useful Website": "Handy links & utilities.",
-                "Useful Websites": "Handy links & utilities.",
-                "Vscode Extensions": "Editor add-ons that help.",
-                "Web Design": "Layouts & inspiration.",
-                "Web Scraping": "Scrapers, parsers, proxies.",
-                "Youtube Videos": "Learning and breakdowns.",
-                "Add New Item": "Create a new tool entry.",
-                "Add New ChatGPT Prompt": "Capture a new prompt.",
-                "Todo App": "Plan and track tasks.",
-            }
             st.markdown(
                 f"""
                 <div class="home-card">
@@ -350,10 +356,12 @@ def home_page(nav_items_for_cards):
                     <span class="icon-badge"><i class="bi bi-{get_icon(title)}"></i></span>
                     <span>{title}</span>
                   </div>
-                  <div class="desc">{desc_map.get(title, f"Open {title} from the sidebar.")}</div>
+                  <div class="desc">{desc_map.get(title, f"Open {title} from the sidebar to explore tools and resources.")}</div>
                 </div>
-                """, unsafe_allow_html=True
+                """,
+                unsafe_allow_html=True
             )
+
 
 # ------------------------------
 # Main
