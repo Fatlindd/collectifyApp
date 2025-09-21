@@ -244,14 +244,12 @@ def render_add_item_page(reader):
 
         description = st.text_area("Description", placeholder="Write a short summary of what this tool does.")
 
-        st.subheader("Visuals & Links")
         col3, col4 = st.columns(2)
         with col3:
             logo_url = st.text_input("Logo URL", placeholder="Paste an image link here")
         with col4:
             store_link = st.text_input("Website / Store Link", placeholder="https://...")
 
-        st.subheader("Additional Info")
         col5, col6 = st.columns(2)
         with col5:
             button_name = st.text_input("Button Label", placeholder="Open, Visit, Try Now")
