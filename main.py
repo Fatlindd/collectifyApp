@@ -3,61 +3,16 @@ from streamlit_option_menu import option_menu
 import gspread
 from google.oauth2.service_account import Credentials
 from gspread.exceptions import APIError
+from style import STYLE_CSS  # Custom CSS file
 from todo import main as todo_main  # Todo module
 
-# ------------------------------
-# Page config
-# ------------------------------
+# Set page configuration
 st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
 
-# Load Bootstrap Icons so we can reuse the SAME icons as the navbar inside cards
-st.markdown(
-    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">',
-    unsafe_allow_html=True,
-)
-
-# ------------------------------
-# Inline CSS (light, simple cards; no full-width)
-# ------------------------------
-STYLE_CSS = """
-<style>
-:root {
-  --card-bg: #ffffff;
-  --card-border: #eaeaea;
-  --card-shadow: 0 2px 8px rgba(0,0,0,0.06);
-}
-html, body, [data-testid="stAppViewContainer"] { background: #f7f8fb; }
-
-/* Simple home cards */
-.home-card {
-  background: var(--card-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: var(--card-shadow);
-  height: 100%;
-}
-.home-card .title {
-  display:flex; align-items:center; gap:.6rem;
-  font-weight: 700; font-size: 18px;
-}
-.home-card .desc {
-  margin-top: 6px; color:#4b5563; line-height:1.45;
-  font-size: 14px;
-}
-/* Icon badge using Bootstrap icon */
-.icon-badge {
-  display:inline-flex; align-items:center; justify-content:center;
-  width:34px; height:34px; border-radius:10px;
-  background:#eef6ff; color:#0b6bcb; font-size:18px;
-}
-</style>
-"""
+# Inject custom styles
 st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
-# ------------------------------
-# Credentials
-# ------------------------------
+# Load credentials from secrets
 try:
     creds_info = st.secrets["gcp_service_account"]
     scopes = [
@@ -70,16 +25,7 @@ except Exception as e:
     st.exception(e)
     st.stop()
 
-# ------------------------------
-# Navigation helper (kept for future use)
-# ------------------------------
-def go_to(page_name: str):
-    st.session_state["__force_nav__"] = page_name
-    st.rerun()
 
-# ------------------------------
-# Google Sheets Reader
-# ------------------------------
 class CollectifySheetReader:
     SPREADSHEET_TITLE = "Collectify"
 
@@ -92,9 +38,7 @@ class CollectifySheetReader:
 
     def _authorize_client(self):
         try:
-            credentials = Credentials.from_service_account_info(
-                st.secrets["gcp_service_account"], scopes=self.scope
-            )
+            credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=self.scope)
             return gspread.authorize(credentials)
         except Exception as e:
             st.error("❌ Could not authorize Google Sheets client.")
@@ -135,7 +79,6 @@ class CollectifySheetReader:
         return filtered
 
     def append_new_item(self, item):
-        # kept for future use; not exposed in navbar per your instruction
         try:
             headers = self.worksheet.row_values(1)
             new_row = [item.get(header, "") for header in headers]
@@ -144,13 +87,11 @@ class CollectifySheetReader:
             st.error("❌ Failed to append new item to the sheet.")
             st.exception(e)
 
-# ------------------------------
-# Category Page
-# ------------------------------
+
 def render_category_page(reader, target_category):
     st.title(f"{target_category} Tools")
     st.write(
-        f"This page displays a curated list of **{target_category}** tools and resources. Browse the cards below."
+        f"This page displays a curated list of {target_category} tools and resources. Browse through the cards below and click on any tool to learn more."
     )
     st.divider()
 
@@ -161,42 +102,43 @@ def render_category_page(reader, target_category):
         st.exception(e)
         return
 
-    search_query = st.text_input("Search by name", placeholder="Type a website/app name...").strip()
-    filtered_tools = [t for t in tools if search_query.lower() in str(t.get("name", "")).lower()] if search_query else tools
-
-    st.caption(f"Results: {len(filtered_tools)}")
-
-    if filtered_tools:
-        columns = st.columns(3)
-        for idx, tool in enumerate(filtered_tools):
-            with columns[idx % 3]:
+    if tools:
+        columns = st.columns([1, 1, 1])
+        for idx, tool in enumerate(tools):
+            col = columns[idx % 3]
+            with col:
                 st.markdown(f"""
-                    <div class="home-card">
-                        <div class="title">
-                            <span class="icon-badge"><i class="bi bi-link-45deg"></i></span>
-                            <span>{tool.get('name', 'Untitled Tool')}</span>
-                        </div>
-                        <div class="desc">{tool.get('description', 'No description available.')}</div>
-                        <div style="margin-top:10px;">
+                    <div class="card">
+                        <img src="{tool.get('logo_url', '')}" alt="{tool.get('name', 'Tool')} logo">
+                        <div class="card-title">{tool.get('name', 'Untitled Tool')}</div>
+                        <div class="card-description">{tool.get('description', 'No description available.')}</div>
+                        <div class="card-footer">
                             <a href="{tool.get('store_link', '#')}" target="_blank">
-                                <button class="card-button">Open</button>
+                                <button class="card-button">{tool.get('button_name', 'Open')}</button>
                             </a>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
     else:
-        st.info("ℹ️ No tools match your search.")
+        st.info("ℹ️ No tools available for this category.")
 
-# ------------------------------
-# Add Item Page (kept, not linked)
-# ------------------------------
+
+# ----------------------------------------
+# Add a new item to the tool sheet
+# ----------------------------------------
+
 def render_add_item_page(reader):
     st.title("Add New Item")
-    st.write("Use this page to contribute a new tool to the collection. (This page is not shown in the navbar.)")
+    st.write("Use this page to contribute a new tool to the collection. Fill in the fields below.")
     st.divider()
 
+    # ✅ Instead: load categories directly without caching
     records = reader.get_all_records()
-    categories = sorted(set(record.get("category", "").strip() for record in records if record.get("category", "").strip())) or ["Default"]
+    categories = sorted(
+        set(record.get("category", "").strip() for record in records if record.get("category", "").strip())
+    )
+    if not categories:
+        categories = ["Default"]
 
     col1, col2 = st.columns(2)
     with col1:
@@ -238,9 +180,10 @@ def render_add_item_page(reader):
         else:
             st.warning("⚠️ Please fill in at least the Category and Name fields.")
 
-# ------------------------------
-# Prompts List
-# ------------------------------
+
+# ----------------------------------------
+# Show ChatGPT prompts page
+# ----------------------------------------
 def render_chatgpt_prompts_page(prompts_reader):
     st.title("ChatGPT Prompts")
     st.write("Browse useful ChatGPT prompts with short descriptions and pre-filled content.")
@@ -256,15 +199,15 @@ def render_chatgpt_prompts_page(prompts_reader):
     if records:
         for row in records:
             st.write("📌 " + row.get("description", ""))
-            # Keep prompts rendered strictly as code:
-            st.code(row.get("prompt", ""), language=None)
+            st.code(row.get("prompt", ""))
             st.divider()
     else:
         st.info("ℹ️ No prompts found.")
 
-# ------------------------------
-# Add Prompt
-# ------------------------------
+
+# ----------------------------------------
+# Add new ChatGPT prompt
+# ----------------------------------------
 def render_add_chatgpt_prompt_page(prompts_reader):
     st.title("Add New ChatGPT Prompt")
     st.write("Fill in the details to save a new ChatGPT prompt.")
@@ -275,7 +218,10 @@ def render_add_chatgpt_prompt_page(prompts_reader):
 
     if st.button("Add Prompt"):
         if description and prompt:
-            new_prompt = {"description": description, "prompt": prompt}
+            new_prompt = {
+                "description": description,
+                "prompt": prompt
+            }
             try:
                 prompts_reader.append_new_item(new_prompt)
                 st.success("✅ Prompt added successfully!")
@@ -285,101 +231,61 @@ def render_add_chatgpt_prompt_page(prompts_reader):
         else:
             st.warning("⚠️ Please fill in both the Description and Prompt fields.")
 
-# ------------------------------
-# Sidebar icons (Bootstrap icon names) — used both in navbar and card icons
-# ------------------------------
-ICON_MAP = {
-    "Home": "house",
-    "Add New ChatGPT Prompt": "plus-circle",
-    "---": "dash",
-    "Todo App": "list-task",
-    "ChatGPT Prompts": "chat-dots",
 
-    "Artificial Intelligence": "robot",
-    "Chrome Extensions": "puzzle",
-    "Django": "server",
-    "Free API Resources": "cloud",
-    "FrontEnd Tools": "palette",
-    "Icons Website": "image",
-    "Programming Tools": "gear",
-    "Python": "terminal",
-    "React": "code-slash",
-    "Useful Website": "link-45deg",
-    "Useful Websites": "link-45deg",
-    "Vscode Extensions": "plug",
-    "Web Design": "brush",
-    "Web Scraping": "search",
-    "Youtube Videos": "youtube",
-}
-
-def get_icon(page_name):
-    return ICON_MAP.get(page_name, "tools")
-
-# ------------------------------
-# Home (cards mirror the left navbar, no Open button, same icons)
-# ------------------------------
-def home_page(nav_items_for_cards):
+# ----------------------------------------
+# Homepage
+# ----------------------------------------
+def home_page():
     st.title("Welcome to Collectify Tools")
-    st.write("Discover a curated list of tools, websites, and AI resources. Use the sidebar, or browse modules below.")
+    st.write(
+        "Discover a curated list of tools, websites, and AI resources. Use the sidebar to explore categories, add your own, or check out ChatGPT prompts."
+    )
     st.divider()
+    st.markdown(
+        """
+        ### 🚀 About This App
 
-    st.subheader("Modules at a Glance")
+        I built this platform to centralize the tools and prompts that make my development journey smoother and more productive. Whether you're a student, developer, or tech enthusiast, this toolkit is designed to help you learn faster and work smarter.
 
-    # Build from left navbar; exclude Home and divider only
-    items = [i for i in nav_items_for_cards if i not in ("Home", "---")]
+        **New! Todo App:** Seamlessly add, update, and delete tasks to stay organized and boost your productivity—all in one place.
 
-    if not items:
-        st.info("No modules available yet.")
-        return
+        **Feel free to explore and contribute!** 💡
+        """
+    )
 
-    # Render in 3 columns for non–full-width simple cards
-    cols = st.columns(3)
-    for idx, title in enumerate(items):
-        with cols[idx % 3]:
-            icon_class = get_icon(title)
-            desc = {
-                "ChatGPT Prompts": "Save & reuse high-impact prompts.",
-                "Artificial Intelligence": "AI tools and workflows.",
-                "Chrome Extensions": "Boost your browser productivity.",
-                "Django": "Admin helpers & packages.",
-                "Free API Resources": "Public APIs for prototypes.",
-                "FrontEnd Tools": "UI kits & inspectors.",
-                "Icons Website": "Icon packs & search.",
-                "Programming Tools": "CLIs, linters, formatters.",
-                "Python": "Libraries & utilities.",
-                "React": "Components & hooks.",
-                "Useful Website": "Handy links & utilities.",
-                "Useful Websites": "Handy links & utilities.",
-                "Vscode Extensions": "Editor add-ons that help.",
-                "Web Design": "Layouts & inspiration.",
-                "Web Scraping": "Scrapers, parsers, proxies.",
-                "Youtube Videos": "Learning and breakdowns.",
-                "Add New ChatGPT Prompt": "Capture a new prompt.",
-                "Todo App": "Plan and track tasks.",
-            }.get(title, f"Open the {title} module from the sidebar.")
+def get_icon(page_name, mapping):
+    """
+    Returns the icon for a given page using case-insensitive lookup.
+    If not found, defaults to 'tools'.
+    """
+    for key, icon in mapping.items():
+        if key.lower() == page_name.lower():
+            return icon
+    return "tools"
 
-            st.markdown(
-                f"""
-                <div class="home-card">
-                    <div class="title">
-                        <span class="icon-badge"><i class="bi bi-{icon_class}"></i></span>
-                        <span>{title}</span>
-                    </div>
-                    <div class="desc">{desc}</div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
 
-# ------------------------------
-# Main
-# ------------------------------
 def main():
+    # Inject custom styles
+    st.markdown(STYLE_CSS, unsafe_allow_html=True)
+
+    # Load credentials from Streamlit secrets
+    try:
+        creds_info = st.secrets["gcp_service_account"]
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds = Credentials.from_service_account_info(dict(creds_info), scopes=scopes)
+    except Exception as e:
+        st.error("❌ Failed to load credentials from secrets.")
+        st.exception(e)
+        st.stop()
+
     # Instantiate readers
     main_reader = CollectifySheetReader(creds=creds)
     prompts_reader = CollectifySheetReader(worksheet_name="ChatGPT Prompts", creds=creds)
 
-    # Categories from Sheet for dynamic menu
+    # Get distinct categories for dynamic menu
     try:
         records = main_reader.get_all_records()
         categories = sorted(set(r.get("category", "").strip() for r in records if r.get("category", "").strip()))
@@ -388,39 +294,61 @@ def main():
         st.exception(e)
         categories = []
 
-    # Register pages
+    # Page routing
     page_modules = {
-        "Home": lambda: home_page(nav_items_for_cards=[]),  # placeholder; will be replaced after menu is built
+        "Home": home_page,
+        "Add New Item": lambda: render_add_item_page(main_reader),
         "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
         "Todo App": lambda: todo_main(creds),
-        "---": lambda: None,
-        "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader),
+        "---": lambda: None,  # Just a divider
+        "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader)
     }
-    for category in categories:
-        page_modules[category] = (lambda c=category: render_category_page(main_reader, c))
 
-    # Sidebar (no "Add New Item")
-    menu_keys_top = ["Home", "Add New ChatGPT Prompt", "Todo App", "---", "ChatGPT Prompts"]
+    for category in categories:
+        page_modules[category] = lambda category=category: render_category_page(main_reader, category)
+
+    # Icon mapping for sidebar
+    icon_mapping = {
+        "Home": "house",
+        "Add New Item": "plus-square",
+        "Add New ChatGPT Prompt": "plus-circle",
+        "---": "dash",
+        "ChatGPT Prompts": "chat-dots",
+        "Todo App": "list-task",
+        "Artificial Intelligence": "robot",
+        "Chrome Extensions": "puzzle",
+        "Django": "server",
+        "Free API Resources": "cloud",
+        "FrontEnd Tools": "palette",
+        "Icons Website": "image",
+        "Programming Tools": "gear",
+        "Python": "terminal",
+        "React": "code-slash",
+        "Useful Websites": "link-45deg",
+        "VSCode Extensions": "plug",
+        "Web Design": "brush",
+        "Web Scraping": "search",
+        "Youtube Videos": "youtube"
+    }
+
+    # Menu construction
+    menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "Todo App", "---", "ChatGPT Prompts"]
     menu_keys_bottom = categories
     menu_keys = menu_keys_top + menu_keys_bottom
-    menu_icons = [get_icon(k) for k in menu_keys]
+    menu_icons = [get_icon(key, icon_mapping) for key in menu_keys]
 
     with st.sidebar:
-        selected = option_menu("Useful Tools", menu_keys, icons=menu_icons, default_index=0)
+        selected = option_menu(
+            "Useful Tools",
+            menu_keys,
+            icons=menu_icons,
+            default_index=0
+        )
 
-    # Now that we know the final list, rebuild Home cards from these items
-    page_modules["Home"] = lambda: home_page(menu_keys)
-
-    # Honor card-triggered navigation if used in future
-    if "__force_nav__" in st.session_state:
-        selected = st.session_state.pop("__force_nav__")
-
-    # Route
+    # Page execution
     if selected != "---":
-        if selected not in page_modules and selected in categories:
-            render_category_page(main_reader, selected)
-        else:
-            page_modules.get(selected, lambda: st.error("Page not found"))()
+        page_modules[selected]()
+
 
 if __name__ == "__main__":
     main()
