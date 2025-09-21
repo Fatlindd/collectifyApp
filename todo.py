@@ -89,6 +89,28 @@ class TodoApp:
         self.sheet_client.delete_todo(row_index)
 
 # ----------------------------------------
+# Helpers for DataFrame, metrics & search
+# ----------------------------------------
+def build_df(headers, rows):
+    df = pd.DataFrame(rows, columns=headers)
+    # Normalizim headers -> lower/strip për adresim të sigurt
+    df.columns = [c.strip().lower() for c in df.columns]
+    return df
+
+def compute_stats(df):
+    # Përdor casefold për krahasim pa ndjeshmëri ndaj shkronjave të mëdha/vogla
+    statuses = df['status'].fillna("").map(lambda x: x.strip())
+    total = len(statuses)
+    c = statuses.str.casefold().value_counts()
+    completed = int(c.get('completed', 0))
+    in_progress = int(c.get('in progress', 0))
+    incomplete = int(c.get('incomplete', 0))
+    return total, completed, in_progress, incomplete
+
+def percent(part, total):
+    return (part / total * 100.0) if total else 0.0
+
+# ----------------------------------------
 # Main UI entry point (called from main app)
 # ----------------------------------------
 def main(creds):
@@ -120,11 +142,42 @@ def main(creds):
     elif selected == "Read":
         st.header("🏡 MyTodo List")
         headers, todos = todo_app.list_todos()
+
         if todos:
-            df = pd.DataFrame(todos, columns=headers)
-            df.index = range(1, len(df) + 1)
-            styled_df = df.style.applymap(color_status, subset=["status"])
-            st.dataframe(styled_df, use_container_width=True)
+            df = build_df(headers, todos)
+
+            # --- SEARCH: kërkim sipas emrit të 'todo' ---
+            # Nëse kolona 'todo' nuk ekziston (emërtim tjetër), përdor kolonën e parë.
+            todo_col = 'todo' if 'todo' in df.columns else df.columns[0]
+            query = st.text_input("🔎 Kërko sipas emrit të detyrës", placeholder="Shkruaj një fjalë kyçe...").strip()
+            filtered_df = df[df[todo_col].str.contains(query, case=False, na=False)] if query else df
+
+            # --- METRICS & PROGRESS ---
+            if 'status' in filtered_df.columns:
+                total, completed, in_progress, incomplete = compute_stats(filtered_df)
+
+                m1, m2, m3, m4 = st.columns(4)
+                with m1:
+                    st.metric("Total", total)
+                with m2:
+                    st.metric("Completed", f"{completed}", f"{percent(completed, total):.0f}%")
+                with m3:
+                    st.metric("In Progress", f"{in_progress}", f"{percent(in_progress, total):.0f}%")
+                with m4:
+                    st.metric("Incomplete", f"{incomplete}", f"{percent(incomplete, total):.0f}%")
+
+                # Progres i përgjithshëm (përfundim)
+                st.write("**Progress (Completed)**")
+                st.progress(min(int(percent(completed, total)), 100))
+
+            # --- DATAFRAME: më shumë rreshta në lartësi + stilim statusi ---
+            try:
+                styled = filtered_df.style.applymap(color_status, subset=["status"])
+            except Exception:
+                styled = filtered_df  # Nëse mungon 'status', shfaq pa stilim
+
+            # Rrit lartësinë e tabelës (p.sh. 720px)
+            st.dataframe(styled, use_container_width=True, height=720)
         else:
             st.info("ℹ️ No todos found.")
 
@@ -133,6 +186,7 @@ def main(creds):
         st.header("🔏 Update a Todo")
         headers, todos = todo_app.list_todos()
         if todos:
+            # Etiketa e listës: "todo | status"
             row_options = {
                 f"{todo[0]} | {todo[4]}": i + 2
                 for i, todo in enumerate(todos)
