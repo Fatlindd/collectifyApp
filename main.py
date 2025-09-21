@@ -102,9 +102,23 @@ def render_category_page(reader, target_category):
         st.exception(e)
         return
 
-    if tools:
+    # 🔎 Search bar (by website/app name)
+    search_query = st.text_input(
+        "Search by name",
+        placeholder="Type a website/app name..."
+    ).strip()
+
+    if search_query:
+        filtered_tools = [t for t in tools if search_query.lower() in str(t.get("name", "")).lower()]
+    else:
+        filtered_tools = tools
+
+    # Counter of results
+    st.caption(f"Results: {len(filtered_tools)}")
+
+    if filtered_tools:
         columns = st.columns([1, 1, 1])
-        for idx, tool in enumerate(tools):
+        for idx, tool in enumerate(filtered_tools):
             col = columns[idx % 3]
             with col:
                 st.markdown(f"""
@@ -120,7 +134,7 @@ def render_category_page(reader, target_category):
                     </div>
                 """, unsafe_allow_html=True)
     else:
-        st.info("ℹ️ No tools available for this category.")
+        st.info("ℹ️ No tools match your search.")
 
 
 # ----------------------------------------
@@ -132,7 +146,7 @@ def render_add_item_page(reader):
     st.write("Use this page to contribute a new tool to the collection. Fill in the fields below.")
     st.divider()
 
-    # ✅ Instead: load categories directly without caching
+    # ✅ Load categories directly
     records = reader.get_all_records()
     categories = sorted(
         set(record.get("category", "").strip() for record in records if record.get("category", "").strip())
