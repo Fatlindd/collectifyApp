@@ -70,6 +70,28 @@ STYLE_CSS = """
 st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
 # ------------------------------
+# Subtitles for each category/page
+# ------------------------------
+SUBTITLE_MAP = {
+    "Artificial Intelligence": "Find the right AI tool for building, automating, and creating smarter solutions.",
+    "Chrome Extensions": "Explore the best Chrome extensions to optimize security, creativity, and daily use.",
+    "Django": "Discover powerful Django libraries for cleaner code, better performance, and faster delivery.",
+    "Free API Resources": "Your go-to directory of free APIs to experiment, learn, and build smarter apps.",
+    "FrontEnd Tools": "A collection of frontend resources to design, style, and optimize modern websites.",
+    "Icons Website": "Boost your design workflow with flexible, high-quality icon resources.",
+    "Programming Tools": "Essential editors, IDEs, and platforms to write, test, and debug code efficiently.",
+    "Python": "Practical Python packages to make coding easier, faster, and more secure.",
+    "React": "From UI kits to code converters—everything you need for faster React workflows.",
+    "Useful Website": "Explore practical websites that save time and help you work smarter.",
+    "Useful Websites": "Explore practical websites that save time and help you work smarter.",
+    "Vscode Extensions": "Enhance your Visual Studio Code editor with tools that save time and reduce errors.",
+    "Web Design": "Discover tools that simplify web design, from color palettes to UI components.",
+    "Web Scraping": "A curated collection of tools and resources for data extraction, proxies, and automation.",
+    "Youtube Videos": "Video resources to help you code smarter, faster, and more effectively.",
+    "ChatGPT Prompts": "Browse useful ChatGPT prompts with short descriptions and pre-filled content.",
+}
+
+# ------------------------------
 # Credentials
 # ------------------------------
 try:
@@ -152,6 +174,11 @@ class CollectifySheetReader:
 # ------------------------------
 def render_category_page(reader, target_category):
     st.title(f"{target_category} Tools")
+
+    # Subtitle (if configured)
+    if target_category in SUBTITLE_MAP:
+        st.write(SUBTITLE_MAP[target_category])
+
     st.divider()
 
     try:
@@ -235,11 +262,11 @@ def render_add_item_page(reader):
             st.warning("⚠️ Please fill in at least the Category and Name fields.")
 
 # ------------------------------
-# Prompts Pages (kept as st.code())
+# Prompts Pages (now use SUBTITLE_MAP)
 # ------------------------------
 def render_chatgpt_prompts_page(prompts_reader):
     st.title("ChatGPT Prompts")
-    st.write("Browse useful ChatGPT prompts with short descriptions and pre-filled content.")
+    st.write(SUBTITLE_MAP.get("ChatGPT Prompts", "Browse useful ChatGPT prompts."))
     st.divider()
     try:
         records = prompts_reader.get_all_records()
@@ -296,25 +323,25 @@ def home_page(nav_items_for_cards):
     for idx, title in enumerate(items):
         with cols[idx % 3]:
             desc_map = {
-                "ChatGPT Prompts":"Save & reuse high-impact prompts.",
-                "Artificial Intelligence":"AI tools and workflows.",
-                "Chrome Extensions":"Boost your browser productivity.",
-                "Django":"Admin helpers & packages.",
-                "Free API Resources":"Public APIs for prototypes.",
-                "FrontEnd Tools":"UI kits & inspectors.",
-                "Icons Website":"Icon packs & search.",
-                "Programming Tools":"CLIs, linters, formatters.",
-                "Python":"Libraries & utilities.",
-                "React":"Components & hooks.",
-                "Useful Website":"Handy links & utilities.",
-                "Useful Websites":"Handy links & utilities.",
-                "Vscode Extensions":"Editor add-ons that help.",
-                "Web Design":"Layouts & inspiration.",
-                "Web Scraping":"Scrapers, parsers, proxies.",
-                "Youtube Videos":"Learning and breakdowns.",
-                "Add New Item":"Create a new tool entry.",
-                "Add New ChatGPT Prompt":"Capture a new prompt.",
-                "Todo App":"Plan and track tasks.",
+                "ChatGPT Prompts": SUBTITLE_MAP["ChatGPT Prompts"],
+                "Artificial Intelligence": "AI tools and workflows.",
+                "Chrome Extensions": "Boost your browser productivity.",
+                "Django": "Admin helpers & packages.",
+                "Free API Resources": "Public APIs for prototypes.",
+                "FrontEnd Tools": "UI kits & inspectors.",
+                "Icons Website": "Icon packs & search.",
+                "Programming Tools": "CLIs, linters, formatters.",
+                "Python": "Libraries & utilities.",
+                "React": "Components & hooks.",
+                "Useful Website": "Handy links & utilities.",
+                "Useful Websites": "Handy links & utilities.",
+                "Vscode Extensions": "Editor add-ons that help.",
+                "Web Design": "Layouts & inspiration.",
+                "Web Scraping": "Scrapers, parsers, proxies.",
+                "Youtube Videos": "Learning and breakdowns.",
+                "Add New Item": "Create a new tool entry.",
+                "Add New ChatGPT Prompt": "Capture a new prompt.",
+                "Todo App": "Plan and track tasks.",
             }
             st.markdown(
                 f"""
