@@ -106,7 +106,6 @@ def compute_stats(df):
     return total, completed, in_progress, incomplete
 
 def stat_card(title: str, value: int):
-    # Card minimaliste si në shembullin e fotos
     st.markdown(
         f"""
         <div style="
@@ -142,6 +141,9 @@ def main(creds):
         orientation="horizontal"
     )
 
+    # Divider poshtë nav bar
+    st.divider()
+
     # -------------------- CREATE --------------------
     if selected == "Create":
         st.header("📋 Add New Todo")
@@ -156,18 +158,17 @@ def main(creds):
 
     # -------------------- READ --------------------
     elif selected == "Read":
-        # (U hoq titulli '🏡 MyTodo List')
         headers, todos = todo_app.list_todos()
 
         if todos:
             df = build_df(headers, todos)
 
-            # Kërkim sipas emrit të detyrës (kolona 'todo' ose e para)
+            # Kërkim (pa ikonë)
             todo_col = 'todo' if 'todo' in df.columns else df.columns[0]
-            query = st.text_input("🔎 Kërko sipas emrit të detyrës", placeholder="Shkruaj një fjalë kyçe...").strip()
+            query = st.text_input("Kërko sipas emrit të detyrës", placeholder="Shkruaj një fjalë kyçe...").strip()
             filtered_df = df[df[todo_col].str.contains(query, case=False, na=False)] if query else df
 
-            # METRICS si 'cards' (pa progress bar)
+            # METRICS si cards
             if 'status' in filtered_df.columns:
                 total, completed, in_progress, incomplete = compute_stats(filtered_df)
                 c1, c2, c3 = st.columns(3)
@@ -175,7 +176,10 @@ def main(creds):
                 with c2: stat_card("In Progress", in_progress)
                 with c3: stat_card("Incomplete", incomplete)
 
-            # DATAFRAME më e lartë + stilim statusi
+            # Hapësirë midis kartave dhe tabelës
+            st.markdown("<br>", unsafe_allow_html=True)
+
+            # DATAFRAME
             try:
                 styled = filtered_df.style.applymap(color_status, subset=["status"])
             except Exception:
