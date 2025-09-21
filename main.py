@@ -314,12 +314,12 @@ def get_icon(name): return ICON_MAP.get(name, "tools")
 # Home (unchanged look; cards are compact; no bg override)
 # ------------------------------
 # ------------------------------
-# Home (richer blurbs for "Modules at a Glance")
+# Home (richer blurbs for "Explore All Categories")
 # ------------------------------
 def home_page(nav_items_for_cards):
     st.title("Welcome to Collectify Tools")
     st.divider()
-    st.subheader("Modules at a Glance")
+    st.subheader("Explore All Categories")
 
     items = [i for i in nav_items_for_cards if i not in ("Home","---")]
 
