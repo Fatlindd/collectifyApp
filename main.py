@@ -296,15 +296,15 @@ def render_chatgpt_prompts_page(prompts_reader):
         st.divider()
 
 def render_add_chatgpt_prompt_page(prompts_reader):
-    st.title("💡 Add New ChatGPT Prompt")
+    st.title("Add New ChatGPT Prompt")
     st.write("Store useful prompts with descriptions so they can be easily reused later.")
     st.divider()
 
     with st.form("add_prompt_form", clear_on_submit=True):
-        description = st.text_area("📝 Description", placeholder="e.g. Summarize long articles into bullet points")
-        prompt = st.text_area("💬 Prompt", placeholder="Paste or write the full ChatGPT prompt here")
+        description = st.text_area("Description", placeholder="e.g. Summarize long articles into bullet points")
+        prompt = st.text_area("Prompt", placeholder="Paste or write the full ChatGPT prompt here")
 
-        submitted = st.form_submit_button("✅ Save Prompt")
+        submitted = st.form_submit_button("Save Prompt")
         if submitted:
             if description and prompt:
                 try:
