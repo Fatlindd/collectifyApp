@@ -3,111 +3,98 @@ from streamlit_option_menu import option_menu
 import gspread
 from google.oauth2.service_account import Credentials
 from gspread.exceptions import APIError
-from datetime import datetime
-from style import STYLE_CSS  # Custom CSS file
-from todo import main as todo_main  # Todo module
+from datetime import datetime, timezone
+from todo import main as todo_main
 
-# ---------------------------
-# Page config
-# ---------------------------
+# -----------------------------
+# Inline CSS (STYLE_CSS)
+# -----------------------------
+STYLE_CSS = """
+/* Global page tweaks */
+body, .stApp { background: #f7f9fc; }
+.block-container { padding-top: 1.5rem; }
+
+/* Header */
+.home-header { margin-bottom: 8px; }
+.home-title { font-size: 40px; font-weight: 800; margin: 0; }
+.home-subtitle { font-size: 16px; color: #5f6368; margin: 6px 0 0; }
+
+/* Metric cards */
+.metric-card {
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  margin-bottom: 12px;
+}
+.metric-value { font-size: 36px; font-weight: 700; line-height: 1; }
+.metric-label { font-size: 14px; color: #5f6368; margin-top: 6px; }
+
+/* Module cards */
+.module-card {
+  background: #fff;
+  border: 1px solid #eef0f3;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.module-title { font-weight: 700; font-size: 18px; }
+.module-desc { color: #5f6368; font-size: 14px; }
+
+/* Tool cards (category pages) */
+.card {
+  border: 1px solid #eef0f3;
+  border-radius: 16px;
+  padding: 16px;
+  background: #fff;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+.card img { width: 64px; height: 64px; object-fit: contain; }
+.card-title { font-weight: 700; margin-top: 8px; font-size: 16px; }
+.card-description { color: #5f6368; font-size: 14px; margin: 8px 0 12px; }
+.card-footer .card-button {
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.card-footer .card-button:hover { opacity: .9; }
+"""
+
+# -----------------------------
+# Page configuration and styles
+# -----------------------------
 st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
-
-# Inject your existing custom styles
 st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
-# Additional dashboard CSS (cards, grids, spacing)
-DASHBOARD_CSS = """
-<style>
-/* Header */
-.dashboard-header h1 {
-  font-size: 44px; line-height: 1.1; margin-bottom: 8px;
-}
-.dashboard-header p.subtitle {
-  color: rgba(255,255,255,0.75); margin: 0 0 6px 0; font-size: 15px;
-}
-.dashboard-header .refreshed {
-  font-size: 12px; color: rgba(255,255,255,0.55);
-}
-
-/* KPIs */
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 16px;
-  margin: 22px 0 26px 0;
-}
-.kpi-card {
-  background: #0f172a;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 14px;
-  padding: 18px 18px 14px 18px;
-}
-.kpi-card .label {
-  font-size: 13px; color: rgba(255,255,255,0.70); margin-bottom: 6px;
-}
-.kpi-card .value {
-  font-size: 40px; font-weight: 700; color: #ffffff;
-}
-
-/* Section title */
-.section-title {
-  font-weight: 700; font-size: 16px; letter-spacing: .02em; margin: 6px 0 12px 0;
-  color: rgba(255,255,255,0.85);
-}
-
-/* Module grid */
-.module-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-}
-.module-card {
-  background: #0b1220;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 16px;
-  padding: 18px;
-}
-.module-card .title {
-  display:flex; align-items:center; gap:10px;
-  font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px;
-}
-.module-card .desc {
-  color: rgba(255,255,255,0.72); font-size: 14px; line-height: 1.5;
-}
-.module-emoji {
-  font-size: 20px; width: 28px; height: 28px; display:flex; align-items:center; justify-content:center;
-  background: rgba(255,255,255,0.06); border-radius: 8px;
-}
-
-/* Responsive tweaks */
-@media (max-width: 1200px) {
-  .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 800px) {
-  .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .module-grid { grid-template-columns: 1fr; }
-}
-</style>
-"""
-st.markdown(DASHBOARD_CSS, unsafe_allow_html=True)
-
-# ---------------------------
-# Credentials
-# ---------------------------
+# -----------------------------
+# Auth
+# -----------------------------
 try:
-  creds_info = st.secrets["gcp_service_account"]
-  scopes = [
-      "https://www.googleapis.com/auth/spreadsheets",
-      "https://www.googleapis.com/auth/drive"
-  ]
-  creds = Credentials.from_service_account_info(dict(creds_info), scopes=scopes)
+    creds_info = st.secrets["gcp_service_account"]
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    creds = Credentials.from_service_account_info(dict(creds_info), scopes=scopes)
 except Exception as e:
-  st.error("❌ Failed to load Google credentials.")
-  st.exception(e)
-  st.stop()
+    st.error("Failed to load Google credentials.")
+    st.exception(e)
+    st.stop()
 
 
+# -----------------------------
+# Sheets helper
+# -----------------------------
 class CollectifySheetReader:
     SPREADSHEET_TITLE = "Collectify"
 
@@ -120,10 +107,12 @@ class CollectifySheetReader:
 
     def _authorize_client(self):
         try:
-            credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=self.scope)
+            credentials = Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"], scopes=self.scope
+            )
             return gspread.authorize(credentials)
         except Exception as e:
-            st.error("❌ Could not authorize Google Sheets client.")
+            st.error("Could not authorize Google Sheets client.")
             st.exception(e)
             st.stop()
 
@@ -132,7 +121,7 @@ class CollectifySheetReader:
             spreadsheet = self.client.open(self.SPREADSHEET_TITLE)
             return spreadsheet.worksheet(self.worksheet_name)
         except APIError as e:
-            st.error("❌ Unable to open the worksheet.")
+            st.error("Unable to open the worksheet.")
             st.exception(e)
             st.stop()
 
@@ -140,7 +129,7 @@ class CollectifySheetReader:
         try:
             return self.worksheet.get_all_records()
         except APIError as e:
-            st.error("⚠️ Failed to load data from Google Sheet.")
+            st.error("Failed to load data from Google Sheet.")
             st.exception(e)
             return []
 
@@ -151,12 +140,14 @@ class CollectifySheetReader:
                 "description": "description",
                 "logo_url": "logo_url",
                 "store_link": "store_link",
-                "button_name": "button_name"
+                "button_name": "button_name",
+                "used": "used",
             }
         data = self.get_all_records()
         filtered = [
             {out_key: row.get(sheet_col, "") for out_key, sheet_col in output_mapping.items()}
-            for row in data if row.get(category_field) == target_category
+            for row in data
+            if row.get(category_field) == target_category
         ]
         return filtered
 
@@ -166,33 +157,81 @@ class CollectifySheetReader:
             new_row = [item.get(header, "") for header in headers]
             self.worksheet.append_row(new_row)
         except APIError as e:
-            st.error("❌ Failed to append new item to the sheet.")
+            st.error("Failed to append new item to the sheet.")
             st.exception(e)
 
 
+# -----------------------------
+# UI helpers
+# -----------------------------
+def get_icon(page_name, mapping):
+    for key, icon in mapping.items():
+        if key.lower() == page_name.lower():
+            return icon
+    return "tools"
+
+
+def _count_by_category(records):
+    # total_count, used_count for each category
+    stats = {}
+    for r in records:
+        cat = str(r.get("category", "")).strip()
+        if not cat:
+            continue
+        used = str(r.get("used", "")).strip().lower() in ["yes", "true", "1"]
+        if cat not in stats:
+            stats[cat] = {"total": 0, "used": 0}
+        stats[cat]["total"] += 1
+        if used:
+            stats[cat]["used"] += 1
+    return stats
+
+
+def _metric_card(label, value):
+    st.markdown(
+        f"""
+        <div class="metric-card">
+            <div class="metric-value">{value}</div>
+            <div class="metric-label">{label}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _module_card(title, description):
+    st.markdown(
+        f"""
+        <div class="module-card">
+            <div class="module-title">{title}</div>
+            <div class="module-desc">{description}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# -----------------------------
+# Pages
+# -----------------------------
 def render_category_page(reader, target_category):
     st.title(f"{target_category} Tools")
-    st.write(
-        f"This page displays a curated list of {target_category} tools and resources. Browse through the cards below and click on any tool to learn more."
-    )
+    st.write(f"Browse tools for {target_category}.")
     st.divider()
 
     try:
         tools = reader.get_filtered_tools(target_category=target_category)
     except APIError as e:
-        st.error("❌ Failed to fetch tools from Google Sheet.")
+        st.error("Failed to fetch tools from Google Sheet.")
         st.exception(e)
         return
 
-    search_query = st.text_input(
-        "Search by name",
-        placeholder="Type a website/app name..."
-    ).strip()
-
-    if search_query:
-        filtered_tools = [t for t in tools if search_query.lower() in str(t.get("name", "")).lower()]
-    else:
-        filtered_tools = tools
+    search_query = st.text_input("Search by name", placeholder="Type a website or app name...").strip()
+    filtered_tools = (
+        [t for t in tools if search_query.lower() in str(t.get("name", "")).lower()]
+        if search_query
+        else tools
+    )
 
     st.caption(f"Results: {len(filtered_tools)}")
 
@@ -201,7 +240,8 @@ def render_category_page(reader, target_category):
         for idx, tool in enumerate(filtered_tools):
             col = columns[idx % 3]
             with col:
-                st.markdown(f"""
+                st.markdown(
+                    f"""
                     <div class="card">
                         <img src="{tool.get('logo_url', '')}" alt="{tool.get('name', 'Tool')} logo">
                         <div class="card-title">{tool.get('name', 'Untitled Tool')}</div>
@@ -212,22 +252,22 @@ def render_category_page(reader, target_category):
                             </a>
                         </div>
                     </div>
-                """, unsafe_allow_html=True)
+                    """,
+                    unsafe_allow_html=True,
+                )
     else:
-        st.info("ℹ️ No tools match your search.")
+        st.info("No tools match your search.")
 
 
 def render_add_item_page(reader):
     st.title("Add New Item")
-    st.write("Use this page to contribute a new tool to the collection. Fill in the fields below.")
+    st.write("Fill the fields and submit.")
     st.divider()
 
     records = reader.get_all_records()
-    categories = sorted(
-        set(record.get("category", "").strip() for record in records if record.get("category", "").strip())
-    )
-    if not categories:
-        categories = ["Default"]
+    categories = sorted(set(r.get("category", "").strip() for r in records if r.get("category", "").strip())) or [
+        "Default"
+    ]
 
     col1, col2 = st.columns(2)
     with col1:
@@ -258,42 +298,42 @@ def render_add_item_page(reader):
                 "logo_url": logo_url,
                 "store_link": store_link,
                 "button_name": button_name,
-                "used": used
+                "used": used,
             }
             try:
                 reader.append_new_item(new_item)
-                st.success("✅ New item added successfully!")
+                st.success("New item added.")
             except Exception as e:
-                st.error("❌ Failed to add item.")
+                st.error("Failed to add item.")
                 st.exception(e)
         else:
-            st.warning("⚠️ Please fill in at least the Category and Name fields.")
+            st.warning("Category and Name are required.")
 
 
 def render_chatgpt_prompts_page(prompts_reader):
     st.title("ChatGPT Prompts")
-    st.write("Browse useful ChatGPT prompts with short descriptions and pre-filled content.")
+    st.write("Short descriptions and ready prompts.")
     st.divider()
 
     try:
         records = prompts_reader.get_all_records()
     except APIError as e:
-        st.error("❌ Failed to load prompts.")
+        st.error("Failed to load prompts.")
         st.exception(e)
         return
 
     if records:
         for row in records:
-            st.write("📌 " + row.get("description", ""))
+            st.write("• " + row.get("description", ""))
             st.code(row.get("prompt", ""))
             st.divider()
     else:
-        st.info("ℹ️ No prompts found.")
+        st.info("No prompts found.")
 
 
 def render_add_chatgpt_prompt_page(prompts_reader):
     st.title("Add New ChatGPT Prompt")
-    st.write("Fill in the details to save a new ChatGPT prompt.")
+    st.write("Describe and paste the prompt.")
     st.divider()
 
     description = st.text_area("Description")
@@ -301,148 +341,120 @@ def render_add_chatgpt_prompt_page(prompts_reader):
 
     if st.button("Add Prompt"):
         if description and prompt:
-            new_prompt = {
-                "description": description,
-                "prompt": prompt
-            }
+            new_prompt = {"description": description, "prompt": prompt}
             try:
                 prompts_reader.append_new_item(new_prompt)
-                st.success("✅ Prompt added successfully!")
+                st.success("Prompt added.")
             except Exception as e:
-                st.error("❌ Failed to add prompt.")
+                st.error("Failed to add prompt.")
                 st.exception(e)
         else:
-            st.warning("⚠️ Please fill in both the Description and Prompt fields.")
+            st.warning("Both fields are required.")
 
 
-# ---------------------------
-# NEW: Dashboard-style Home
-# ---------------------------
-def home_page(main_reader, prompts_reader, categories):
-    # Header
+def home_page(records, categories, desc_map):
     st.markdown(
-        f"""
-        <div class="dashboard-header">
-          <h1>UpBizz Management Dashboard</h1>
-          <p class="subtitle">Manage projects, people, credentials, designs, subscriptions, and weekly tasks — all synced with Google Sheets.</p>
-          <div class="refreshed">Refreshed · {datetime.now().strftime("%b %d, %Y %H:%M")}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Compute KPIs from your data
-    records = main_reader.get_all_records()
-    total_tools = len(records)
-    categories_count = len(set(r.get("category", "").strip() for r in records if r.get("category")))
-    used_count = sum(1 for r in records if str(r.get("used", "")).strip().lower() == "yes")
-    unused_count = max(total_tools - used_count, 0)
-
-    try:
-        prompts_count = len(prompts_reader.get_all_records())
-    except Exception:
-        prompts_count = 0
-
-    # KPI row
-    st.markdown(
-        f"""
-        <div class="kpi-grid">
-          <div class="kpi-card"><div class="label">Total Tools</div><div class="value">{total_tools}</div></div>
-          <div class="kpi-card"><div class="label">Categories</div><div class="value">{categories_count}</div></div>
-          <div class="kpi-card"><div class="label">Used</div><div class="value">{used_count}</div></div>
-          <div class="kpi-card"><div class="label">Unused</div><div class="value">{unused_count}</div></div>
-          <div class="kpi-card"><div class="label">ChatGPT Prompts</div><div class="value">{prompts_count}</div></div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    # Section: Modules at a Glance (static labels to mirror the screenshot vibe)
-    st.markdown('<div class="section-title">MODULES AT A GLANCE</div>', unsafe_allow_html=True)
-
-    modules = [
-        {"emoji": "🧮", "title": "Project Costs",
-         "desc": "Track budgets, expenses, company win, left budget, progress and dates. Daily Salary is auto-filled by Apps Script."},
-        {"emoji": "👥", "title": "Employees",
-         "desc": "Directory of roles, salaries and notes. Powers salary lookups used in project calculations."},
-        {"emoji": "🎨", "title": "Figma Clients",
-         "desc": "Clients’ design links, owners and statuses in a searchable, filterable table."},
-        {"emoji": "🔐", "title": "Credentials",
-         "desc": "Securely store platform logins and API keys in a structured sheet."},
-        {"emoji": "🧭", "title": "UpBizz Landing Page",
-         "desc": "Catalog of landing pages, who worked on them, and key links."},
-        {"emoji": "📅", "title": "Tasks History (Weekly)",
-         "desc": "Browse weekly task reports: stacked by person, status and project."},
-    ]
-
-    # Draw module cards
-    cards_html = '<div class="module-grid">'
-    for m in modules:
-        cards_html += f"""
-          <div class="module-card">
-            <div class="title">
-              <span class="module-emoji">{m['emoji']}</span>
-              <span>{m['title']}</span>
-            </div>
-            <div class="desc">{m['desc']}</div>
-          </div>
         """
-    cards_html += "</div>"
-    st.markdown(cards_html, unsafe_allow_html=True)
+        <div class="home-header">
+            <h1 class="home-title">UpBizz Management Dashboard</h1>
+            <p class="home-subtitle">Manage projects, people, credentials, designs, subscriptions, and weekly tasks, synced with Google Sheets.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    refreshed = datetime.now(timezone.utc).astimezone().strftime("%b %d, %Y %H:%M")
+    st.caption(f"Refreshed · {refreshed}")
+
+    # Metrics
+    stats = _count_by_category(records)
+    metric_items = []
+    for cat in categories:
+        stat = stats.get(cat, {"used": 0, "total": 0})
+        metric_items.append((cat, stat["used"]))
+
+    if metric_items:
+        cols_per_row = 4
+        rows = (len(metric_items) + cols_per_row - 1) // cols_per_row
+        for r in range(rows):
+            cols = st.columns(cols_per_row)
+            for i in range(cols_per_row):
+                idx = r * cols_per_row + i
+                if idx >= len(metric_items):
+                    break
+                with cols[i]:
+                    label, value = metric_items[idx]
+                    _metric_card(label, value)
+
+    st.divider()
+
+    # Modules at a Glance
+    st.subheader("Modules At a Glance")
+    cols_per_row = 3
+    rows = (len(categories) + cols_per_row - 1) // cols_per_row
+    for r in range(rows):
+        cols = st.columns(cols_per_row)
+        for i in range(cols_per_row):
+            idx = r * cols_per_row + i
+            if idx >= len(categories):
+                break
+            cat = categories[idx]
+            with cols[i]:
+                _module_card(cat, desc_map.get(cat, "Browse saved links and tools."))
 
 
-# ---------------------------
-# App routing
-# ---------------------------
-def get_icon(page_name, mapping):
-    for key, icon in mapping.items():
-        if key.lower() == page_name.lower():
-            return icon
-    return "tools"
-
-
+# -----------------------------
+# Main
+# -----------------------------
 def main():
     st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
-    # Load credentials (again inside main to be safe in reruns)
     try:
-        creds_info = st.secrets["gcp_service_account"]
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = Credentials.from_service_account_info(dict(creds_info), scopes=scopes)
+        creds_local = Credentials.from_service_account_info(dict(st.secrets["gcp_service_account"]), scopes=scopes)
     except Exception as e:
-        st.error("❌ Failed to load credentials from secrets.")
+        st.error("Failed to load credentials from secrets.")
         st.exception(e)
         st.stop()
 
-    # Readers
-    main_reader = CollectifySheetReader(creds=creds)
-    prompts_reader = CollectifySheetReader(worksheet_name="ChatGPT Prompts", creds=creds)
+    main_reader = CollectifySheetReader(creds=creds_local)
+    prompts_reader = CollectifySheetReader(worksheet_name="ChatGPT Prompts", creds=creds_local)
 
-    # Categories for dynamic menu
     try:
         records = main_reader.get_all_records()
         categories = sorted(set(r.get("category", "").strip() for r in records if r.get("category", "").strip()))
     except Exception as e:
-        st.error("⚠️ Failed to load categories.")
+        st.error("Failed to load categories.")
         st.exception(e)
         categories = []
 
-    # Page registry
+    module_descriptions = {
+        "Artificial Intelligence": "AI tools, models, and prompt libraries.",
+        "Chrome Extensions": "Browser add-ons for daily work.",
+        "Django": "Back-end packages and helpers.",
+        "Free API Resources": "Open APIs for demos and apps.",
+        "FrontEnd Tools": "UI kits, generators, and checkers.",
+        "Icons Website": "Icon sets and SVG libraries.",
+        "Programming Tools": "CLIs, debuggers, utilities.",
+        "Python": "Libraries, docs, and snippets.",
+        "React": "Components, templates, and guides.",
+        "Useful Websites": "Helpful sites for work.",
+        "VSCode Extensions": "Editor add-ons that save time.",
+        "Web Design": "Inspiration, colors, and grids.",
+        "Web Scraping": "Scrapers, proxies, and parsers.",
+        "Youtube Videos": "Playlists and tutorials.",
+    }
+
     page_modules = {
-        "Home": lambda: home_page(main_reader, prompts_reader, categories),
+        "Home": lambda: home_page(records, categories, module_descriptions),
         "Add New Item": lambda: render_add_item_page(main_reader),
         "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
-        "Todo App": lambda: todo_main(creds),
+        "Todo App": lambda: todo_main(creds_local),
         "---": lambda: None,
         "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader),
     }
+
     for category in categories:
         page_modules[category] = lambda category=category: render_category_page(main_reader, category)
 
-    # Icons
     icon_mapping = {
         "Home": "house",
         "Add New Item": "plus-square",
@@ -472,12 +484,7 @@ def main():
     menu_icons = [get_icon(key, icon_mapping) for key in menu_keys]
 
     with st.sidebar:
-        selected = option_menu(
-            "Useful Tools",
-            menu_keys,
-            icons=menu_icons,
-            default_index=0
-        )
+        selected = option_menu("Useful Tools", menu_keys, icons=menu_icons, default_index=0)
 
     if selected != "---":
         page_modules[selected]()
