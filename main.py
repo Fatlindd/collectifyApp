@@ -3,16 +3,59 @@ from streamlit_option_menu import option_menu
 import gspread
 from google.oauth2.service_account import Credentials
 from gspread.exceptions import APIError
-from style import STYLE_CSS  # Custom CSS file
 from todo import main as todo_main  # Todo module
 
-# Set page configuration
+# ------------------------------
+# Page config
+# ------------------------------
 st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
 
-# Inject custom styles
+# Bootstrap Icons
+st.markdown(
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">',
+    unsafe_allow_html=True,
+)
+
+# ------------------------------
+# Inline CSS
+# ------------------------------
+STYLE_CSS = """
+<style>
+:root {
+  --card-bg: #ffffff;
+  --card-border: #eaeaea;
+  --card-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+html, body, [data-testid="stAppViewContainer"] { background: #f7f8fb; }
+
+.home-card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--card-shadow);
+  height: 100%;
+}
+.home-card .title {
+  display:flex; align-items:center; gap:.6rem;
+  font-weight: 700; font-size: 18px;
+}
+.home-card .desc {
+  margin-top: 6px; color:#4b5563; line-height:1.45;
+  font-size: 14px;
+}
+.icon-badge {
+  display:inline-flex; align-items:center; justify-content:center;
+  width:34px; height:34px; border-radius:10px;
+  background:#eef6ff; color:#0b6bcb; font-size:18px;
+}
+</style>
+"""
 st.markdown(STYLE_CSS, unsafe_allow_html=True)
 
-# Load credentials from secrets
+# ------------------------------
+# Credentials
+# ------------------------------
 try:
     creds_info = st.secrets["gcp_service_account"]
     scopes = [
@@ -25,7 +68,9 @@ except Exception as e:
     st.exception(e)
     st.stop()
 
-
+# ------------------------------
+# Google Sheets Reader
+# ------------------------------
 class CollectifySheetReader:
     SPREADSHEET_TITLE = "Collectify"
 
@@ -38,7 +83,9 @@ class CollectifySheetReader:
 
     def _authorize_client(self):
         try:
-            credentials = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=self.scope)
+            credentials = Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"], scopes=self.scope
+            )
             return gspread.authorize(credentials)
         except Exception as e:
             st.error("❌ Could not authorize Google Sheets client.")
@@ -87,12 +134,11 @@ class CollectifySheetReader:
             st.error("❌ Failed to append new item to the sheet.")
             st.exception(e)
 
-
+# ------------------------------
+# Category Page
+# ------------------------------
 def render_category_page(reader, target_category):
     st.title(f"{target_category} Tools")
-    st.write(
-        f"This page displays a curated list of {target_category} tools and resources. Browse through the cards below and click on any tool to learn more."
-    )
     st.divider()
 
     try:
@@ -102,43 +148,41 @@ def render_category_page(reader, target_category):
         st.exception(e)
         return
 
-    if tools:
-        columns = st.columns([1, 1, 1])
-        for idx, tool in enumerate(tools):
-            col = columns[idx % 3]
-            with col:
+    search_query = st.text_input("Search by name", placeholder="Type a website/app name...").strip()
+    filtered_tools = [t for t in tools if search_query.lower() in str(t.get("name", "")).lower()] if search_query else tools
+
+    st.caption(f"Results: {len(filtered_tools)}")
+
+    if filtered_tools:
+        columns = st.columns(3)
+        for idx, tool in enumerate(filtered_tools):
+            with columns[idx % 3]:
                 st.markdown(f"""
-                    <div class="card">
-                        <img src="{tool.get('logo_url', '')}" alt="{tool.get('name', 'Tool')} logo">
-                        <div class="card-title">{tool.get('name', 'Untitled Tool')}</div>
-                        <div class="card-description">{tool.get('description', 'No description available.')}</div>
-                        <div class="card-footer">
+                    <div class="home-card">
+                        <div class="title">
+                            <span class="icon-badge"><i class="bi bi-link-45deg"></i></span>
+                            <span>{tool.get('name', 'Untitled Tool')}</span>
+                        </div>
+                        <div class="desc">{tool.get('description', 'No description available.')}</div>
+                        <div style="margin-top:10px;">
                             <a href="{tool.get('store_link', '#')}" target="_blank">
-                                <button class="card-button">{tool.get('button_name', 'Open')}</button>
+                                <button class="card-button">Open</button>
                             </a>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
     else:
-        st.info("ℹ️ No tools available for this category.")
+        st.info("ℹ️ No tools match your search.")
 
-
-# ----------------------------------------
-# Add a new item to the tool sheet
-# ----------------------------------------
-
+# ------------------------------
+# Add Item Page
+# ------------------------------
 def render_add_item_page(reader):
     st.title("Add New Item")
-    st.write("Use this page to contribute a new tool to the collection. Fill in the fields below.")
     st.divider()
 
-    # ✅ Instead: load categories directly without caching
     records = reader.get_all_records()
-    categories = sorted(
-        set(record.get("category", "").strip() for record in records if record.get("category", "").strip())
-    )
-    if not categories:
-        categories = ["Default"]
+    categories = sorted(set(record.get("category", "").strip() for record in records if record.get("category", "").strip())) or ["Default"]
 
     col1, col2 = st.columns(2)
     with col1:
@@ -180,10 +224,9 @@ def render_add_item_page(reader):
         else:
             st.warning("⚠️ Please fill in at least the Category and Name fields.")
 
-
-# ----------------------------------------
-# Show ChatGPT prompts page
-# ----------------------------------------
+# ------------------------------
+# Prompts Page
+# ------------------------------
 def render_chatgpt_prompts_page(prompts_reader):
     st.title("ChatGPT Prompts")
     st.write("Browse useful ChatGPT prompts with short descriptions and pre-filled content.")
@@ -199,18 +242,16 @@ def render_chatgpt_prompts_page(prompts_reader):
     if records:
         for row in records:
             st.write("📌 " + row.get("description", ""))
-            st.code(row.get("prompt", ""))
+            st.code(row.get("prompt", ""), language=None)  # <<< keep as code block
             st.divider()
     else:
         st.info("ℹ️ No prompts found.")
 
-
-# ----------------------------------------
-# Add new ChatGPT prompt
-# ----------------------------------------
+# ------------------------------
+# Add Prompt Page
+# ------------------------------
 def render_add_chatgpt_prompt_page(prompts_reader):
     st.title("Add New ChatGPT Prompt")
-    st.write("Fill in the details to save a new ChatGPT prompt.")
     st.divider()
 
     description = st.text_area("Description")
@@ -218,10 +259,7 @@ def render_add_chatgpt_prompt_page(prompts_reader):
 
     if st.button("Add Prompt"):
         if description and prompt:
-            new_prompt = {
-                "description": description,
-                "prompt": prompt
-            }
+            new_prompt = {"description": description, "prompt": prompt}
             try:
                 prompts_reader.append_new_item(new_prompt)
                 st.success("✅ Prompt added successfully!")
@@ -231,61 +269,68 @@ def render_add_chatgpt_prompt_page(prompts_reader):
         else:
             st.warning("⚠️ Please fill in both the Description and Prompt fields.")
 
+# ------------------------------
+# Sidebar Icons
+# ------------------------------
+ICON_MAP = {
+    "Home": "house",
+    "Add New Item": "plus-square",
+    "Add New ChatGPT Prompt": "plus-circle",
+    "---": "dash",
+    "Todo App": "list-task",
+    "ChatGPT Prompts": "chat-dots",
+    "Artificial Intelligence": "robot",
+    "Chrome Extensions": "puzzle",
+    "Django": "server",
+    "Free API Resources": "cloud",
+    "FrontEnd Tools": "palette",
+    "Icons Website": "image",
+    "Programming Tools": "gear",
+    "Python": "terminal",
+    "React": "code-slash",
+    "Useful Website": "link-45deg",
+    "Useful Websites": "link-45deg",
+    "Vscode Extensions": "plug",
+    "Web Design": "brush",
+    "Web Scraping": "search",
+    "Youtube Videos": "youtube",
+}
+def get_icon(page_name):
+    return ICON_MAP.get(page_name, "tools")
 
-# ----------------------------------------
-# Homepage
-# ----------------------------------------
-def home_page():
+# ------------------------------
+# Home
+# ------------------------------
+def home_page(nav_items_for_cards):
     st.title("Welcome to Collectify Tools")
-    st.write(
-        "Discover a curated list of tools, websites, and AI resources. Use the sidebar to explore categories, add your own, or check out ChatGPT prompts."
-    )
     st.divider()
-    st.markdown(
-        """
-        ### 🚀 About This App
 
-        I built this platform to centralize the tools and prompts that make my development journey smoother and more productive. Whether you're a student, developer, or tech enthusiast, this toolkit is designed to help you learn faster and work smarter.
+    st.subheader("Modules at a Glance")
+    items = [i for i in nav_items_for_cards if i not in ("Home", "---")]
+    cols = st.columns(3)
 
-        **New! Todo App:** Seamlessly add, update, and delete tasks to stay organized and boost your productivity—all in one place.
+    for idx, title in enumerate(items):
+        with cols[idx % 3]:
+            st.markdown(
+                f"""
+                <div class="home-card">
+                    <div class="title">
+                        <span class="icon-badge"><i class="bi bi-{get_icon(title)}"></i></span>
+                        <span>{title}</span>
+                    </div>
+                    <div class="desc">Open {title} from the sidebar.</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-        **Feel free to explore and contribute!** 💡
-        """
-    )
-
-def get_icon(page_name, mapping):
-    """
-    Returns the icon for a given page using case-insensitive lookup.
-    If not found, defaults to 'tools'.
-    """
-    for key, icon in mapping.items():
-        if key.lower() == page_name.lower():
-            return icon
-    return "tools"
-
-
+# ------------------------------
+# Main
+# ------------------------------
 def main():
-    # Inject custom styles
-    st.markdown(STYLE_CSS, unsafe_allow_html=True)
-
-    # Load credentials from Streamlit secrets
-    try:
-        creds_info = st.secrets["gcp_service_account"]
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = Credentials.from_service_account_info(dict(creds_info), scopes=scopes)
-    except Exception as e:
-        st.error("❌ Failed to load credentials from secrets.")
-        st.exception(e)
-        st.stop()
-
-    # Instantiate readers
     main_reader = CollectifySheetReader(creds=creds)
     prompts_reader = CollectifySheetReader(worksheet_name="ChatGPT Prompts", creds=creds)
 
-    # Get distinct categories for dynamic menu
     try:
         records = main_reader.get_all_records()
         categories = sorted(set(r.get("category", "").strip() for r in records if r.get("category", "").strip()))
@@ -294,61 +339,35 @@ def main():
         st.exception(e)
         categories = []
 
-    # Page routing
     page_modules = {
-        "Home": home_page,
+        "Home": lambda: home_page(nav_items_for_cards=[]),
         "Add New Item": lambda: render_add_item_page(main_reader),
         "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
         "Todo App": lambda: todo_main(creds),
-        "---": lambda: None,  # Just a divider
-        "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader)
+        "---": lambda: None,
+        "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader),
     }
-
     for category in categories:
-        page_modules[category] = lambda category=category: render_category_page(main_reader, category)
+        page_modules[category] = (lambda c=category: render_category_page(main_reader, c))
 
-    # Icon mapping for sidebar
-    icon_mapping = {
-        "Home": "house",
-        "Add New Item": "plus-square",
-        "Add New ChatGPT Prompt": "plus-circle",
-        "---": "dash",
-        "ChatGPT Prompts": "chat-dots",
-        "Todo App": "list-task",
-        "Artificial Intelligence": "robot",
-        "Chrome Extensions": "puzzle",
-        "Django": "server",
-        "Free API Resources": "cloud",
-        "FrontEnd Tools": "palette",
-        "Icons Website": "image",
-        "Programming Tools": "gear",
-        "Python": "terminal",
-        "React": "code-slash",
-        "Useful Websites": "link-45deg",
-        "VSCode Extensions": "plug",
-        "Web Design": "brush",
-        "Web Scraping": "search",
-        "Youtube Videos": "youtube"
-    }
-
-    # Menu construction
     menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "Todo App", "---", "ChatGPT Prompts"]
     menu_keys_bottom = categories
     menu_keys = menu_keys_top + menu_keys_bottom
-    menu_icons = [get_icon(key, icon_mapping) for key in menu_keys]
+    menu_icons = [get_icon(k) for k in menu_keys]
 
     with st.sidebar:
-        selected = option_menu(
-            "Useful Tools",
-            menu_keys,
-            icons=menu_icons,
-            default_index=0
-        )
+        selected = option_menu("Useful Tools", menu_keys, icons=menu_icons, default_index=0)
 
-    # Page execution
+    page_modules["Home"] = lambda: home_page(menu_keys)
+
+    if "__force_nav__" in st.session_state:
+        selected = st.session_state.pop("__force_nav__")
+
     if selected != "---":
-        page_modules[selected]()
-
+        if selected not in page_modules and selected in categories:
+            render_category_page(main_reader, selected)
+        else:
+            page_modules.get(selected, lambda: st.error("Page not found"))()
 
 if __name__ == "__main__":
     main()
