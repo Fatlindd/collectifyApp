@@ -226,7 +226,7 @@ def render_category_page(reader, target_category):
 # Add Item Page (unchanged)
 # ------------------------------
 def render_add_item_page(reader):
-    st.title("➕ Add New Item")
+    st.title("Add New Item")
     st.write("Fill out the form below to add a new tool into the Collectify Apps library.")
     st.divider()
 
