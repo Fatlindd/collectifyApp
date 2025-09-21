@@ -5,124 +5,12 @@ from google.oauth2.service_account import Credentials
 from gspread.exceptions import APIError
 from style import STYLE_CSS  # Custom CSS file
 from todo import main as todo_main  # Todo module
-import hashlib
 
 # Set page configuration
 st.set_page_config(page_title="Useful Tools", page_icon=":zap:", layout="wide")
 
-# Inject custom styles (global) + local card CSS
-CARD_CSS = """
-<style>
-.tool-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-}
-@media (max-width: 1100px) {
-  .tool-grid { grid-template-columns: 1fr; }
-}
-
-.tool-card {
-  position: relative;
-  border-radius: 18px;
-  border: 1px solid #E8E8EE;
-  overflow: hidden;
-  background: linear-gradient(180deg, rgba(0,0,0,0.02), rgba(0,0,0,0.00));
-  box-shadow: 0 1px 0 rgba(0,0,0,0.02);
-}
-
-.tool-card::before {
-  /* left accent stripe */
-  content: "";
-  position: absolute;
-  left: 0; top: 0; bottom: 0;
-  width: 8px;
-  background: var(--accent, #21c7b9);
-}
-
-.tool-card__inner {
-  padding: 20px 22px 18px 22px;
-}
-
-.tool-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.tool-card__title {
-  font-size: 28px;
-  font-weight: 700;
-  color: #2B2B36;
-  line-height: 1.2;
-}
-
-.badge {
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #114a1f;
-  background: #DFF7E7; /* Active green */
-  border: 1px solid #CBEFDB;
-  white-space: nowrap;
-}
-.badge.inactive {
-  color: #4a4a50;
-  background: #F0F0F3;
-  border-color: #E5E5EA;
-}
-
-.tool-card__meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 24px;
-  margin-top: 8px;
-}
-
-.meta-block { display: flex; flex-direction: column; gap: 6px; }
-.meta-label { color: #6F7081; font-size: 13px; }
-.meta-value { color: #1f1f29; font-size: 18px; font-weight: 700; }
-
-.pill {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #E8EEFF;
-  color: #2D3B88;
-  font-weight: 600;
-  font-size: 13px;
-  border: 1px solid #DBE2FD;
-}
-
-.tool-card__footer {
-  border-top: 1px solid #EFF0F4;
-  margin-top: 16px;
-  padding-top: 14px;
-  color: #30303B;
-  font-size: 14px;
-}
-
-.tool-card a.card-link {
-  display: inline-block;
-  margin-top: 6px;
-  text-decoration: none;
-  border-bottom: 1px dashed #21c7b9;
-  color: #148f87;
-  font-weight: 600;
-}
-
-.tool-card .price {
-  font-size: 20px;
-  font-weight: 800;
-}
-</style>
-"""
-
+# Inject custom styles
 st.markdown(STYLE_CSS, unsafe_allow_html=True)
-st.markdown(CARD_CSS, unsafe_allow_html=True)
 
 # Load credentials from secrets
 try:
@@ -175,34 +63,19 @@ class CollectifySheetReader:
             return []
 
     def get_filtered_tools(self, target_category, category_field="category", output_mapping=None):
-        # Add richer fields to support the card UI
         if output_mapping is None:
             output_mapping = {
                 "name": "name",
-                "description": "description",     # optional (notes/body)
-                "logo_url": "logo_url",           # optional (not shown in this design)
-                "store_link": "store_link",       # fallback link
-                "button_name": "button_name",     # optional (not shown in this design)
-                "status": "status",               # Active/Inactive
-                "category": "category",           # Category label
-                "plan_tier": "plan_tier",         # e.g., €17.00
-                "team": "team",                   # e.g., Developer
-                "seats": "seats",                 # integer/string
-                "total_expense": "total_expense", # e.g., €51.00
-                "notes": "notes",                 # longer description
-                "link_url": "link_url"            # preferred link for "Learn more"
+                "description": "description",
+                "logo_url": "logo_url",
+                "store_link": "store_link",
+                "button_name": "button_name"
             }
         data = self.get_all_records()
-        filtered = []
-        for row in data:
-            if row.get(category_field) == target_category:
-                mapped = {out: row.get(src, "") for out, src in output_mapping.items()}
-                # Backwards-compatible fallbacks
-                if not mapped.get("notes") and mapped.get("description"):
-                    mapped["notes"] = mapped["description"]
-                if not mapped.get("link_url") and mapped.get("store_link"):
-                    mapped["link_url"] = mapped["store_link"]
-                filtered.append(mapped)
+        filtered = [
+            {out_key: row.get(sheet_col, "") for out_key, sheet_col in output_mapping.items()}
+            for row in data if row.get(category_field) == target_category
+        ]
         return filtered
 
     def append_new_item(self, item):
@@ -215,100 +88,10 @@ class CollectifySheetReader:
             st.exception(e)
 
 
-# ---------- Helpers for card rendering ----------
-def _accent_from_text(text: str) -> str:
-    """Generate a stable accent color from a text (category/name)."""
-    if not text:
-        return "#21c7b9"
-    h = hashlib.md5(text.encode()).hexdigest()
-    # pick a pleasant hue from hash, keep saturation/lightness fixed (HSL -> rough map to hex)
-    hue = int(h[:2], 16) % 360
-    # Simple HSL to hex approximation with fixed S/L
-    import colorsys
-    r, g, b = colorsys.hls_to_rgb(hue/360.0, 0.90, 0.45)  # light, soft
-    return "#{:02x}{:02x}{:02x}".format(int(r*255), int(g*255), int(b*255))
-
-def _fmt(value, default="—"):
-    return str(value).strip() if str(value).strip() else default
-
-def _badge(status: str) -> str:
-    s = (status or "").strip().lower()
-    cls = "badge" if s == "active" else "badge inactive"
-    label = "Active" if s == "active" else (status or "—")
-    return f'<span class="{cls}">{label}</span>'
-
-def _pill(text: str) -> str:
-    return f'<span class="pill">{_fmt(text, "—")}</span>'
-
-def _price(text: str) -> str:
-    t = _fmt(text, "—")
-    if t != "—":
-        return f'<span class="price">{t}</span>'
-    return t
-
-def render_tool_card(tool: dict):
-    title = _fmt(tool.get("name"))
-    status_html = _badge(tool.get("status", "Active"))
-    category = _fmt(tool.get("category"))
-    plan_tier = _price(tool.get("plan_tier"))
-    team = _pill(tool.get("team"))
-    seats = _fmt(tool.get("seats"))
-    total_expense = _price(tool.get("total_expense"))
-    notes = _fmt(tool.get("notes"), "")
-    link_url = tool.get("link_url") or "#"
-
-    accent = _accent_from_text(category or title)
-
-    return f"""
-    <div class="tool-card" style="--accent: {accent};">
-      <div class="tool-card__inner">
-        <div class="tool-card__header">
-          <div class="tool-card__title">{title}</div>
-          {status_html}
-        </div>
-
-        <div class="tool-card__meta">
-          <div class="meta-block">
-            <div class="meta-label">Category</div>
-            <div class="meta-value">{category}</div>
-          </div>
-
-          <div class="meta-block">
-            <div class="meta-label">Plan/Tier</div>
-            <div class="meta-value">{plan_tier}</div>
-          </div>
-
-          <div class="meta-block">
-            <div class="meta-label">Team</div>
-            <div class="meta-value">{team}</div>
-          </div>
-
-          <div class="meta-block">
-            <div class="meta-label">Seats</div>
-            <div class="meta-value">{seats}</div>
-          </div>
-
-          <div class="meta-block">
-            <div class="meta-label">Total Expense</div>
-            <div class="meta-value">{total_expense}</div>
-          </div>
-        </div>
-
-        <div class="tool-card__footer">
-          {notes}
-          {"<br/>" if notes != "—" else ""}
-          <a class="card-link" href="{link_url}" target="_blank" rel="noopener">Learn more</a>
-        </div>
-      </div>
-    </div>
-    """
-
-
-# ---------- Pages ----------
 def render_category_page(reader, target_category):
     st.title(f"{target_category} Tools")
     st.write(
-        f"This page displays a curated list of {target_category} tools and resources."
+        f"This page displays a curated list of {target_category} tools and resources. Browse through the cards below and click on any tool to learn more."
     )
     st.divider()
 
@@ -319,7 +102,7 @@ def render_category_page(reader, target_category):
         st.exception(e)
         return
 
-    # 🔎 Search by name (case-insensitive)
+    # 🔎 Search bar (by website/app name)
     search_query = st.text_input(
         "Search by name",
         placeholder="Type a website/app name..."
@@ -330,24 +113,40 @@ def render_category_page(reader, target_category):
     else:
         filtered_tools = tools
 
+    # Counter of results
     st.caption(f"Results: {len(filtered_tools)}")
 
-    if not filtered_tools:
+    if filtered_tools:
+        columns = st.columns([1, 1, 1])
+        for idx, tool in enumerate(filtered_tools):
+            col = columns[idx % 3]
+            with col:
+                st.markdown(f"""
+                    <div class="card">
+                        <img src="{tool.get('logo_url', '')}" alt="{tool.get('name', 'Tool')} logo">
+                        <div class="card-title">{tool.get('name', 'Untitled Tool')}</div>
+                        <div class="card-description">{tool.get('description', 'No description available.')}</div>
+                        <div class="card-footer">
+                            <a href="{tool.get('store_link', '#')}" target="_blank">
+                                <button class="card-button">{tool.get('button_name', 'Open')}</button>
+                            </a>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+    else:
         st.info("ℹ️ No tools match your search.")
-        return
 
-    # Render as a responsive grid of cards
-    st.markdown('<div class="tool-grid">', unsafe_allow_html=True)
-    for tool in filtered_tools:
-        st.markdown(render_tool_card(tool), unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
+# ----------------------------------------
+# Add a new item to the tool sheet
+# ----------------------------------------
 
 def render_add_item_page(reader):
     st.title("Add New Item")
     st.write("Use this page to contribute a new tool to the collection. Fill in the fields below.")
     st.divider()
 
+    # ✅ Load categories directly
     records = reader.get_all_records()
     categories = sorted(
         set(record.get("category", "").strip() for record in records if record.get("category", "").strip())
@@ -396,6 +195,9 @@ def render_add_item_page(reader):
             st.warning("⚠️ Please fill in at least the Category and Name fields.")
 
 
+# ----------------------------------------
+# Show ChatGPT prompts page
+# ----------------------------------------
 def render_chatgpt_prompts_page(prompts_reader):
     st.title("ChatGPT Prompts")
     st.write("Browse useful ChatGPT prompts with short descriptions and pre-filled content.")
@@ -417,6 +219,9 @@ def render_chatgpt_prompts_page(prompts_reader):
         st.info("ℹ️ No prompts found.")
 
 
+# ----------------------------------------
+# Add new ChatGPT prompt
+# ----------------------------------------
 def render_add_chatgpt_prompt_page(prompts_reader):
     st.title("Add New ChatGPT Prompt")
     st.write("Fill in the details to save a new ChatGPT prompt.")
@@ -441,6 +246,9 @@ def render_add_chatgpt_prompt_page(prompts_reader):
             st.warning("⚠️ Please fill in both the Description and Prompt fields.")
 
 
+# ----------------------------------------
+# Homepage
+# ----------------------------------------
 def home_page():
     st.title("Welcome to Collectify Tools")
     st.write(
@@ -451,14 +259,19 @@ def home_page():
         """
         ### 🚀 About This App
 
-        I built this platform to centralize the tools and prompts that make my development journey smoother and more productive.
+        I built this platform to centralize the tools and prompts that make my development journey smoother and more productive. Whether you're a student, developer, or tech enthusiast, this toolkit is designed to help you learn faster and work smarter.
 
         **New! Todo App:** Seamlessly add, update, and delete tasks to stay organized and boost your productivity—all in one place.
+
+        **Feel free to explore and contribute!** 💡
         """
     )
 
-
 def get_icon(page_name, mapping):
+    """
+    Returns the icon for a given page using case-insensitive lookup.
+    If not found, defaults to 'tools'.
+    """
     for key, icon in mapping.items():
         if key.lower() == page_name.lower():
             return icon
@@ -466,9 +279,8 @@ def get_icon(page_name, mapping):
 
 
 def main():
-    # Reinforce styles in case Streamlit reruns
+    # Inject custom styles
     st.markdown(STYLE_CSS, unsafe_allow_html=True)
-    st.markdown(CARD_CSS, unsafe_allow_html=True)
 
     # Load credentials from Streamlit secrets
     try:
@@ -487,7 +299,7 @@ def main():
     main_reader = CollectifySheetReader(creds=creds)
     prompts_reader = CollectifySheetReader(worksheet_name="ChatGPT Prompts", creds=creds)
 
-    # Sidebar dynamic categories
+    # Get distinct categories for dynamic menu
     try:
         records = main_reader.get_all_records()
         categories = sorted(set(r.get("category", "").strip() for r in records if r.get("category", "").strip()))
@@ -496,17 +308,20 @@ def main():
         st.exception(e)
         categories = []
 
+    # Page routing
     page_modules = {
         "Home": home_page,
         "Add New Item": lambda: render_add_item_page(main_reader),
         "Add New ChatGPT Prompt": lambda: render_add_chatgpt_prompt_page(prompts_reader),
         "Todo App": lambda: todo_main(creds),
-        "---": lambda: None,
+        "---": lambda: None,  # Just a divider
         "ChatGPT Prompts": lambda: render_chatgpt_prompts_page(prompts_reader)
     }
+
     for category in categories:
         page_modules[category] = lambda category=category: render_category_page(main_reader, category)
 
+    # Icon mapping for sidebar
     icon_mapping = {
         "Home": "house",
         "Add New Item": "plus-square",
@@ -530,6 +345,7 @@ def main():
         "Youtube Videos": "youtube"
     }
 
+    # Menu construction
     menu_keys_top = ["Home", "Add New Item", "Add New ChatGPT Prompt", "Todo App", "---", "ChatGPT Prompts"]
     menu_keys_bottom = categories
     menu_keys = menu_keys_top + menu_keys_bottom
@@ -543,6 +359,7 @@ def main():
             default_index=0
         )
 
+    # Page execution
     if selected != "---":
         page_modules[selected]()
 
